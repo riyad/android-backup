@@ -1,0 +1,62 @@
+#!/bin/bash
+#
+# Riyad Preukschas <riyad@informatik.uni-bremen.de>
+#
+# Backs up your Android phone's storage.
+# It'll also back up your current TitaniumBackup apps for faster restoration.
+
+
+# on a running Android /sdcard is symlinked to /storage/emulated/[legacy|0]
+# but in TWRP it's directly mounted to /sdcard (so the other dirs aren't there)
+readonly ANDROID_STORAGE="/sdcard"
+
+alias adb="adb -d"
+adb_package_path() {
+  adb shell pm path "$1" | tr -d '\r' | sed "s/^package://"
+}
+adb_pull() {
+  adb pull -p -a "$1" "$2"
+}
+adb_pull_app() {
+  adb_pull "$(adb_package_path "$1")" "$2"
+}
+
+
+# make sure we get a path to backup stuff into
+if [[ -z "$1" ]]; then
+  backup_dir_name="./bkp `date '+%Y-%m-%dT%H-%M'`"
+  echo "You haven't specified a backup directory."
+  read -p "Use '${backup_dir_name}'? [y/n] " yn
+  case $yn in
+    [Yy]* ) ;;  # just get through
+    [Nn]* ) exit;;
+    * ) exit 1;;
+  esac
+  readonly BACKUP_DIR="${backup_dir_name}"
+else
+  readonly BACKUP_DIR="$1"
+fi
+
+
+# make sure we don't overwrite anything by accident
+if [[ -d "${BACKUP_DIR}" ]]; then
+  echo "WARNING: '${BACKUP_DIR}' exists already!"
+  read -p "Are you sure you want to overwrite files in there? [Yes/No] " yn
+  case $yn in
+    'Yes'* ) ;;  # just get through
+    'No'* ) exit;;
+    * ) exit 1;;
+  esac
+fi
+
+
+mkdir -p "${BACKUP_DIR}"
+cd "${BACKUP_DIR}"
+
+
+echo "Backing-up user data ..."
+adb_pull "${ANDROID_STORAGE}/" .
+echo "Backing-up TitaniumBackup apps ..."
+adb_pull_app com.keramidas.TitaniumBackup TitaniumBackup.apk
+adb_pull_app com.keramidas.TitaniumBackupPro TitaniumBackupPro.apk
+echo "... Done!"

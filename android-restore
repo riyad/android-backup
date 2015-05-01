@@ -1,0 +1,88 @@
+#!/bin/bash
+#
+# Riyad Preukschas <riyad@informatik.uni-bremen.de>
+#
+# Restores previously backed-up files to your Android phone.
+# You still need to restore your apps and config by running TitaniumBackup.
+
+
+# for easy listing of directory contents starting with '.'
+GLOBIGNORE=.:..
+# on a running Android /sdcard is symlinked to /storage/emulated/[legacy|0]
+# but in TWRP it's directly mounted to /sdcard (so the other dirs aren't there)
+readonly ANDROID_STORAGE="/sdcard"
+# these are relative to BACKUP_DIR
+readonly TB_DIR="TitaniumBackup"
+readonly TB_APKS="TitaniumBackup.apk TitaniumBackupPro.apk"
+readonly PRIO_DIRS="WhatsApp DCIM Pictures"
+readonly SKIP_DIRS="${TB_DIR} ${TB_APKS} ${PRIO_DIRS}"
+
+alias adb="adb -d"
+# thanks to http://stackoverflow.com/questions/8063228/how-do-i-check-if-a-variable-exists-in-a-list-in-bash
+contains() {
+  local list="$1"
+  local item="$2"
+  [[ ${list} =~ (^|[[:space:]])${item}($|[[:space:]]) ]]
+}
+adb_install() {
+  adb install "$1"
+}
+adb_push() {
+  adb push -p "$1" "${ANDROID_STORAGE}/$1"
+}
+
+
+# make sure we get a path to restore stuff from
+if [[ -z "$1" ]]; then
+  echo "Please specify the directory your backups are in!"
+  exit 1
+else
+  readonly BACKUP_DIR="$1"
+fi
+
+
+if [[ ! -d "${BACKUP_DIR}" ]]; then
+  echo "'${BACKUP_DIR}' is not a directory."
+  exit 1
+fi
+
+
+cd "${BACKUP_DIR}"
+
+
+echo "Restoring TitaniumBackup data first ..."
+if [ ! -d "${TB_DIR}" ]; then
+  echo "Can't find TitaniumBackup data directory"
+  exit 1
+fi
+adb_push "${TB_DIR}"
+
+
+# install TitaniumBackup so we can start restoring stuff on the device itself
+echo "Restoring TitaniumBackup apps ..."
+for apk in ${TB_APKS}; do
+  if [[ -f "${apk}" ]]; then
+    adb_install "${apk}"
+  else
+    echo "Can't find TitaniumBackup app '${apk}'."
+    exit 1
+  fi
+done
+
+
+echo "Restoring some other things with priority ..."
+for dir in ${PRIO_DIRS}; do
+  [[ ! -d "${dir}" ]] && continue
+  adb_push "${dir}"
+done
+
+
+echo "Restoring all the rest ..."
+for dir in *; do
+  if $(contains "${SKIP_DIRS}" "${dir}"); then
+    echo "Skipping previously restored '${dir}'"
+    continue
+  fi
+  adb_push "${dir}"
+done
+echo "... Done!"
