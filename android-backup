@@ -20,6 +20,9 @@ adb_pull() {
 adb_pull_app() {
   adb_pull "$(adb_package_path "$1")" "$2"
 }
+adb_rm_dir() {
+  adb shell '[[ -d "$1" ]] && rm -r "$1"'
+}
 
 
 # make sure we get a path to backup stuff into
@@ -54,6 +57,13 @@ mkdir -p "${BACKUP_DIR}"
 cd "${BACKUP_DIR}"
 
 
+echo "Cleaning-up (well-known) caches ..."
+adb_rm_dir /sdcard/DCIM/.thumbnails/
+adb_rm_dir /sdcard/Android/data/com.android.providers.media/albumthumbs/
+adb_rm_dir /sdcard/Android/data/com.owncloud.android/cache/
+adb_rm_dir /sdcard/Android/data/com.tweetlanes.android/cache/
+adb_rm_dir /sdcard/Android/data/org.videolan.vlc/cache/
+adb_rm_dir /sdcard/Android/data/org.wikipedia/cache/
 echo "Backing-up user data ..."
 adb_pull "${ANDROID_STORAGE}/" .
 echo "Backing-up TitaniumBackup apps ..."
