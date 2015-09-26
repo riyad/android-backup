@@ -21,7 +21,7 @@ adb_pull_app() {
   adb_pull "$(adb_package_path "$1")" "$2"
 }
 adb_rm_dir() {
-  adb shell '[[ -d "$1" ]] && rm -r "$1"'
+  adb shell "[[ -d \"$1\" ]] && rm -r \"$1\""
 }
 
 
