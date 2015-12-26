@@ -28,6 +28,20 @@ adb_pull_app() {
 adb_rm_dir() {
   adb shell "[[ -d \"$1\" ]] && rm -r \"$1\""
 }
+rsync_pull() {
+  # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
+  # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
+  local RSYNCD_CONFIG="${ANDROID_STORAGE}/.rsyncd.conf"
+  local RSYNCD_PORT=1873  # should be above 1024 to be able to bind to without root
+  adb shell "printf \"address = 127.0.0.1\nport = ${RSYNCD_PORT}\n\n[root]\npath = /\nuse chroot = false\nread only = true\"" \> "${RSYNCD_CONFIG}"
+  adb shell rsync --daemon --no-detach --config="${RSYNCD_CONFIG}" &  # for debugging --log-file=/proc/self/fd/2
+  adb forward tcp:6010 tcp:${RSYNCD_PORT}
+  sleep 2
+  rsync --partial --progress --archive --human-readable --prune-empty-dirs --delete "rsync://localhost:6010/root/$1/" "$2"
+  : rc $?
+  adb forward --remove tcp:6010
+  adb shell rm -f "${RSYNCD_CONFIG}"
+}
 
 
 # make sure we get a path to backup stuff into
