@@ -18,7 +18,12 @@ adb_pull() {
   adb pull -p -a "$1" "$2"
 }
 adb_pull_app() {
-  adb_pull "$(adb_package_path "$1")" "$2"
+  if [[ -z "$(adb_package_path \"$1\")" ]]; then
+    echo "Can't find app '$1'."
+    return 1
+  else
+    adb_pull "$(adb_package_path \"$1\")" "$2"
+  fi
 }
 adb_rm_dir() {
   adb shell "[[ -d \"$1\" ]] && rm -r \"$1\""
