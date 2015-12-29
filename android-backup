@@ -9,6 +9,9 @@
 # on a running Android /sdcard is symlinked to /storage/emulated/[legacy|0]
 # but in TWRP it's directly mounted to /sdcard (so the other dirs aren't there)
 readonly ANDROID_STORAGE="/sdcard"
+readonly RSYNC_CONFIG="${ANDROID_STORAGE}/.rsyncd.conf"
+readonly RSYNC_DEVICE_PORT=1873  # should be above 1024 to be able to bind to without root
+readonly RSYNC_LOCAL_PORT=6010
 
 alias adb="adb -d"
 adb_package_path() {
@@ -28,19 +31,22 @@ adb_pull_app() {
 adb_rm_dir() {
   adb shell "[[ -d \"$1\" ]] && rm -r \"$1\""
 }
+rsync_cleanup() {
+  adb forward --remove tcp:${RSYNC_LOCAL_PORT}
+  adb shell rm -f "${RSYNC_CONFIG}"
+}
 rsync_pull() {
+  # TODO: exclude *.apk, ${ANDROID_STORAGE}/Android/data/*/cache
+  rsync --partial --progress --archive --human-readable --prune-empty-dirs --delete "rsync://localhost:6010/root/$1" "$2"
+  : rc $?
+}
+rsync_setup() {
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
   # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
-  local RSYNCD_CONFIG="${ANDROID_STORAGE}/.rsyncd.conf"
-  local RSYNCD_PORT=1873  # should be above 1024 to be able to bind to without root
-  adb shell "printf \"address = 127.0.0.1\nport = ${RSYNCD_PORT}\n\n[root]\npath = /\nuse chroot = false\nread only = true\"" \> "${RSYNCD_CONFIG}"
-  adb shell rsync --daemon --no-detach --config="${RSYNCD_CONFIG}" &  # for debugging --log-file=/proc/self/fd/2
-  adb forward tcp:6010 tcp:${RSYNCD_PORT}
+  adb shell "printf \"address = 127.0.0.1\nport = ${RSYNC_DEVICE_PORT}\n\n[root]\npath = /\nuse chroot = false\nread only = true\"" \> "${RSYNC_CONFIG}"
+  adb shell rsync --daemon --no-detach --config="${RSYNC_CONFIG}" &  # for debugging --log-file=/proc/self/fd/2
+  adb forward tcp:${RSYNC_LOCAL_PORT} tcp:${RSYNC_DEVICE_PORT}
   sleep 2
-  rsync --partial --progress --archive --human-readable --prune-empty-dirs --delete "rsync://localhost:6010/root/$1/" "$2"
-  : rc $?
-  adb forward --remove tcp:6010
-  adb shell rm -f "${RSYNCD_CONFIG}"
 }
 
 
