@@ -17,9 +17,6 @@ alias adb="adb -d"
 adb_package_path() {
   adb shell pm path "$1" | tr -d '\r' | sed "s/^package://"
 }
-adb_pull() {
-  adb pull -p -a "$1" "$2"
-}
 adb_pull_app() {
   if [[ -z "$(adb_package_path \"$1\")" ]]; then
     echo "Can't find app $1"
