@@ -25,7 +25,7 @@ adb_pull_app() {
     echo "Can't find app $1"
     return 1
   else
-    adb_pull "$(adb_package_path \"$1\")" "$2"
+    rsync_pull "$(adb_package_path \"$1\")" "$2"
   fi
 }
 adb_rm_dir() {
