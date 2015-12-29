@@ -76,7 +76,6 @@ fi
 
 
 mkdir -p "${BACKUP_DIR}"
-cd "${BACKUP_DIR}"
 
 
 rsync_setup
@@ -92,9 +91,9 @@ adb_rm_dir "${ANDROID_STORAGE}/Android/data/org.videolan.vlc/cache/"
 adb_rm_dir "${ANDROID_STORAGE}/Android/data/org.wikipedia/cache/"
 adb_rm_dir "${ANDROID_STORAGE}/sdcard/Applidium Image Cache/"
 echo "Backing up user data ..."
-rsync_pull "${ANDROID_STORAGE}/" "./"
+rsync_pull "${ANDROID_STORAGE}/" "${BACKUP_DIR}/"
 echo "Backing up TitaniumBackup apps ..."
-adb_pull_app com.keramidas.TitaniumBackup TitaniumBackup.apk
-adb_pull_app com.keramidas.TitaniumBackupPro TitaniumBackupPro.apk
+adb_pull_app com.keramidas.TitaniumBackup "${BACKUP_DIR}/TitaniumBackup.apk"
+adb_pull_app com.keramidas.TitaniumBackupPro "${BACKUP_DIR}/TitaniumBackupPro.apk"
 rsync_cleanup
 echo "... Done!"
