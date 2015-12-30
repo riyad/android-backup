@@ -67,24 +67,24 @@ if [[ ! -d "${BACKUP_DIR}" ]]; then
 fi
 
 
-cd "${BACKUP_DIR}"
+rsync_setup
 
 
 echo "Restoring TitaniumBackup data first ..."
-if [ ! -d "${TB_DIR}" ]; then
+if [ ! -d "${BACKUP_DIR}/${TB_DIR}" ]; then
   echo "Can't find TitaniumBackup data directory"
   exit 1
 fi
-adb_push "${TB_DIR}"
+rsync_push "${BACKUP_DIR}/${TB_DIR}" "${ANDROID_STORAGE}/${TB_DIR}"
 
 
 # install TitaniumBackup so we can start restoring stuff on the device itself
 echo "Restoring TitaniumBackup apps ..."
 for apk in ${TB_APKS}; do
-  if [[ -f "${apk}" ]]; then
-    adb_install "${apk}"
+  if [[ -f "${BACKUP_DIR}/${apk}" ]]; then
+    adb_install "${BACKUP_DIR}/${apk}"
   else
-    echo "Can't find TitaniumBackup app '${apk}'."
+    echo "Can't find TitaniumBackup app ${apk}."
     exit 1
   fi
 done
@@ -92,8 +92,8 @@ done
 
 echo "Restoring some other things with priority ..."
 for dir in ${PRIO_DIRS}; do
-  [[ ! -d "${dir}" ]] && continue
-  adb_push "${dir}"
+  [[ ! -d "${BACKUP_DIR}/${dir}" ]] && continue
+  rsync_push "${BACKUP_DIR}/${dir}" "${ANDROID_STORAGE}/${dir}"
 done
 
 
@@ -103,6 +103,7 @@ for dir in *; do
     echo "Skipping previously restored '${dir}'"
     continue
   fi
-  adb_push "${dir}"
+  rsync_push "${BACKUP_DIR}/${dir}" "${ANDROID_STORAGE}/${dir}"
 done
+rsync_cleanup
 echo "... Done!"
