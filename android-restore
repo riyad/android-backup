@@ -39,7 +39,7 @@ rsync_cleanup() {
   adb shell rm -f "${RSYNC_CONFIG}"
 }
 rsync_push() {
-  rsync --partial --progress --archive --human-readable -n --delete --filter='- .DS_Store' "$1/" "rsync://localhost:6010/root/$2/"
+  rsync --partial --progress --archive --human-readable -n --delete --filter='H .DS_Store' "$1/" "rsync://localhost:6010/root/$2/"
   : rc $?
 }
 rsync_setup() {

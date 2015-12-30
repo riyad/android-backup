@@ -9,9 +9,11 @@
 # on a running Android /sdcard is symlinked to /storage/emulated/[legacy|0]
 # but in TWRP it's directly mounted to /sdcard (so the other dirs aren't there)
 readonly ANDROID_STORAGE="/sdcard"
-readonly RSYNC_CONFIG="${ANDROID_STORAGE}/.rsyncd.conf"
+readonly RSYNC_CONFIG="/data/local/tmp/rsync.conf"
+readonly RSYNC_FILTER_FILE=`mktemp -t "$(basename $0)"`
 readonly RSYNC_DEVICE_PORT=1873  # should be above 1024 to be able to bind to without root
 readonly RSYNC_LOCAL_PORT=6010
+RSYNC_BIN="rsync"
 
 alias adb="adb -d"
 adb_package_path() {
@@ -30,18 +32,18 @@ adb_rm_dir() {
 }
 rsync_cleanup() {
   adb forward --remove tcp:${RSYNC_LOCAL_PORT}
-  adb shell rm -f "${RSYNC_CONFIG}"
+  adb shell rm -f "${RSYNC_CONFIG}" "${RSYNC_FILTER_FILE}"
 }
 rsync_pull() {
-  # TODO: exclude *.apk, ${ANDROID_STORAGE}/Android/data/*/cache
-  rsync --partial --progress --archive --human-readable --prune-empty-dirs --delete "rsync://localhost:6010/root/$1" "$2"
+  rsync --partial --progress --archive --human-readable --prune-empty-dirs --delete --filter='H .DS_Store' --filter=". ${RSYNC_FILTER_FILE}" "rsync://localhost:6010/root/$1" "$2"
   : rc $?
 }
 rsync_setup() {
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
   # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
-  adb shell "printf \"address = 127.0.0.1\nport = ${RSYNC_DEVICE_PORT}\n\n[root]\npath = /\nuse chroot = false\nread only = true\"" \> "${RSYNC_CONFIG}"
-  adb shell rsync --daemon --no-detach --config="${RSYNC_CONFIG}" &  # for debugging --log-file=/proc/self/fd/2
+  adb shell "echo \"address = 127.0.0.1\nport = ${RSYNC_DEVICE_PORT}\n\n[root]\npath = /\nuse chroot = false\nread only = true\"" \> "${RSYNC_CONFIG}"
+  touch "${RSYNC_FILTER_FILE}"
+  adb shell ${RSYNC_BIN} --daemon --no-detach --config="${RSYNC_CONFIG}" &  # for debugging --log-file=/proc/self/fd/2
   adb forward tcp:${RSYNC_LOCAL_PORT} tcp:${RSYNC_DEVICE_PORT}
   sleep 2
 }
@@ -79,19 +81,17 @@ mkdir -p "${BACKUP_DIR}"
 
 
 rsync_setup
-echo "Cleaning up (well-known) caches ..."
-adb_rm_dir "${ANDROID_STORAGE}/DCIM/.thumbnails/"
-adb_rm_dir "${ANDROID_STORAGE}/Android/data/com.android.providers.media/albumthumbs/"
-adb_rm_dir "${ANDROID_STORAGE}/Android/data/com.google.android.apps.maps/cache"
-adb_rm_dir "${ANDROID_STORAGE}/Android/data/com.google.android.youtube/cache/"
-adb_rm_dir "${ANDROID_STORAGE}/Android/data/com.owncloud.android/cache/"
-adb_rm_dir "${ANDROID_STORAGE}/Android/data/com.tweetlanes.android/cache/"
-adb_rm_dir "${ANDROID_STORAGE}/Android/data/org.mariotaku.twidere/cache/"
-adb_rm_dir "${ANDROID_STORAGE}/Android/data/org.telegram.messenger/cache/"
-adb_rm_dir "${ANDROID_STORAGE}/Android/data/org.videolan.vlc/cache/"
-adb_rm_dir "${ANDROID_STORAGE}/Android/data/org.wikipedia/cache/"
-adb_rm_dir "${ANDROID_STORAGE}/Applidium Image Cache/"
 echo "Backing up user data ..."
+echo 'P /TitaniumBackup.apk' >> "${RSYNC_FILTER_FILE}"
+echo 'P /TitaniumBackupPro.apk' >> "${RSYNC_FILTER_FILE}"
+echo 'H .cache/' >> "${RSYNC_FILTER_FILE}"
+echo 'H .thumbs/' >> "${RSYNC_FILTER_FILE}"
+echo 'H .thumbnails/' >> "${RSYNC_FILTER_FILE}"
+echo 'H /Android/data/com.android.providers.media/albumthumbs/' >> "${RSYNC_FILTER_FILE}"
+echo 'H /Android/data/*/cache' >> "${RSYNC_FILTER_FILE}"
+echo 'H /Applidium Image Cache/' >> "${RSYNC_FILTER_FILE}"
+echo 'H /CameraZOOM/.packs/' >> "${RSYNC_FILTER_FILE}"
+echo 'H /CameraZOOM/.temp/' >> "${RSYNC_FILTER_FILE}"
 rsync_pull "${ANDROID_STORAGE}/" "${BACKUP_DIR}/"
 echo "Backing up TitaniumBackup apps ..."
 adb_pull_app com.keramidas.TitaniumBackup "${BACKUP_DIR}/TitaniumBackup.apk"
