@@ -33,7 +33,8 @@ adb_rm_dir() {
 }
 rsync_cleanup() {
   adb forward --remove tcp:${LOCAL_RSYNC_PORT}
-  adb shell rm -f "${REMOTE_RSYNC_CONFIG}" "${LOCAL_RSYNC_FILTER_FILE}"
+  adb shell rm -f "${REMOTE_RSYNC_CONFIG}"
+  [[ -e "${LOCAL_RSYNC_FILTER_FILE}" ]] && rm "${LOCAL_RSYNC_FILTER_FILE}"
 }
 rsync_pull() {
   rsync --partial --progress --archive --human-readable --delete \
