@@ -16,6 +16,7 @@ readonly REMOTE_RSYNC_CONFIG="${REMOTE_TEMP_DIR}/rsync.conf"
 readonly REMOTE_RSYNC_PORT=1873  # should be above 1024 to be able to bind to without root
 readonly LOCAL_RSYNC_PORT=6010
          REMOTE_RSYNC_BIN="rsync"
+readonly REMOTE_TEMP_RSYNC_BIN="${REMOTE_TEMP_DIR}/rsync"
 # these are relative to BACKUP_DIR
 readonly TB_DIR="TitaniumBackup"
 readonly TB_APKS="TitaniumBackup.apk TitaniumBackupPro.apk"
@@ -38,6 +39,10 @@ adb_push() {
 rsync_cleanup() {
   adb forward --remove tcp:${LOCAL_RSYNC_PORT}
   adb shell rm -f "${REMOTE_RSYNC_CONFIG}"
+  if [[ -f "${REMOTE_TEMP_RSYNC_BIN}" ]]; then
+    echo "Cleaning up temporary rsync"
+    adb shell rm -f "${REMOTE_TEMP_RSYNC_BIN}"
+  fi
 }
 rsync_push() {
   # needs extra --temp-dir option against 'mkstemp "..." (in root) failed: Operation not permitted (1)" errors
@@ -48,6 +53,20 @@ rsync_push() {
   : rc $?
 }
 rsync_setup() {
+  if [[ -z "$(adb shell which \"${REMOTE_RSYNC_BIN}\")" ]]; then
+    echo "Device doesn't have rsync."
+    local SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    local RSYNC_SRC="${SCRIPT_DIR}/rsync.bkp"
+    if [[ -e "${RSYNC_SRC}" ]]; then
+      echo "Providing temporary rsync from ${RSYNC_SRC} ..."
+      adb_push "${RSYNC_SRC}" "${REMOTE_TEMP_RSYNC_BIN}"
+      adb shell chmod 755 "${REMOTE_TEMP_RSYNC_BIN}"
+      REMOTE_RSYNC_BIN="${REMOTE_TEMP_RSYNC_BIN}"
+    else
+      echo "Can't provide temprorary rsync."
+      exit 1
+    fi
+  fi
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
   # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
   adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[root]\npath = /\nuse chroot = false\nread only = false\"" \> "${REMOTE_RSYNC_CONFIG}"

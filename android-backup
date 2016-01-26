@@ -14,6 +14,7 @@ readonly REMOTE_RSYNC_CONFIG="${REMOTE_TEMP_DIR}/rsync.conf"
 readonly REMOTE_RSYNC_PORT=1873  # should be above 1024 to be able to bind to without root
 readonly LOCAL_RSYNC_PORT=6010
          REMOTE_RSYNC_BIN="rsync"
+readonly REMOTE_TEMP_RSYNC_BIN="${REMOTE_TEMP_DIR}/rsync"
 readonly LOCAL_RSYNC_FILTER_FILE=`mktemp -t "$(basename $0)"`
 
 alias adb="adb -d"
@@ -28,12 +29,19 @@ adb_pull_app() {
     rsync_pull "$(adb_package_path \"$1\")" "$2"
   fi
 }
+adb_push() {
+  adb push -p "$1" "$2"
+}
 adb_rm_dir() {
   adb shell "[[ -d \"$1\" ]] && rm -r \"$1\""
 }
 rsync_cleanup() {
   adb forward --remove tcp:${LOCAL_RSYNC_PORT}
   adb shell rm -f "${REMOTE_RSYNC_CONFIG}"
+  if [[ -f "${REMOTE_TEMP_RSYNC_BIN}" ]]; then
+    echo "Cleaning up temporary rsync"
+    adb shell rm -f "${REMOTE_TEMP_RSYNC_BIN}"
+  fi
   [[ -e "${LOCAL_RSYNC_FILTER_FILE}" ]] && rm "${LOCAL_RSYNC_FILTER_FILE}"
 }
 rsync_pull() {
@@ -43,6 +51,20 @@ rsync_pull() {
   : rc $?
 }
 rsync_setup() {
+  if [[ -z "$(adb shell which \"${REMOTE_RSYNC_BIN}\")" ]]; then
+    echo "Device doesn't have rsync."
+    local SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    local RSYNC_SRC="${SCRIPT_DIR}/rsync.bkp"
+    if [[ -e "${RSYNC_SRC}" ]]; then
+      echo "Providing temporary rsync from ${RSYNC_SRC} ..."
+      adb_push "${RSYNC_SRC}" "${REMOTE_TEMP_RSYNC_BIN}"
+      adb shell chmod 755 "${REMOTE_TEMP_RSYNC_BIN}"
+      REMOTE_RSYNC_BIN="${REMOTE_TEMP_RSYNC_BIN}"
+    else
+      echo "Can't provide temprorary rsync."
+      exit 1
+    fi
+  fi
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
   # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
   adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[root]\npath = /\nuse chroot = false\nread only = true\"" \> "${REMOTE_RSYNC_CONFIG}"
