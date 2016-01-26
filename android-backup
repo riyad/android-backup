@@ -9,11 +9,12 @@
 # on a running Android /sdcard is symlinked to /storage/emulated/[legacy|0]
 # but in TWRP it's directly mounted to /sdcard (so the other dirs aren't there)
 readonly ANDROID_STORAGE="/sdcard"
-readonly RSYNC_CONFIG="/data/local/tmp/rsync.conf"
-readonly RSYNC_FILTER_FILE=`mktemp -t "$(basename $0)"`
-readonly RSYNC_DEVICE_PORT=1873  # should be above 1024 to be able to bind to without root
-readonly RSYNC_LOCAL_PORT=6010
-RSYNC_BIN="rsync"
+readonly REMOTE_TEMP_DIR="/data/local/tmp"
+readonly REMOTE_RSYNC_CONFIG="${REMOTE_TEMP_DIR}/rsync.conf"
+readonly REMOTE_RSYNC_PORT=1873  # should be above 1024 to be able to bind to without root
+readonly LOCAL_RSYNC_PORT=6010
+         REMOTE_RSYNC_BIN="rsync"
+readonly LOCAL_RSYNC_FILTER_FILE=`mktemp -t "$(basename $0)"`
 
 alias adb="adb -d"
 adb_package_path() {
@@ -31,20 +32,22 @@ adb_rm_dir() {
   adb shell "[[ -d \"$1\" ]] && rm -r \"$1\""
 }
 rsync_cleanup() {
-  adb forward --remove tcp:${RSYNC_LOCAL_PORT}
-  adb shell rm -f "${RSYNC_CONFIG}" "${RSYNC_FILTER_FILE}"
+  adb forward --remove tcp:${LOCAL_RSYNC_PORT}
+  adb shell rm -f "${REMOTE_RSYNC_CONFIG}" "${LOCAL_RSYNC_FILTER_FILE}"
 }
 rsync_pull() {
-  rsync --partial --progress --archive --human-readable --prune-empty-dirs --delete --filter='H .DS_Store' --filter=". ${RSYNC_FILTER_FILE}" "rsync://localhost:6010/root/$1" "$2"
+  rsync --partial --progress --archive --human-readable --delete \
+    --filter='H .DS_Store' --filter=". ${LOCAL_RSYNC_FILTER_FILE}" --prune-empty-dirs \
+    "rsync://localhost:6010/root/$1" "$2"
   : rc $?
 }
 rsync_setup() {
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
   # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
-  adb shell "echo \"address = 127.0.0.1\nport = ${RSYNC_DEVICE_PORT}\n\n[root]\npath = /\nuse chroot = false\nread only = true\"" \> "${RSYNC_CONFIG}"
-  touch "${RSYNC_FILTER_FILE}"
-  adb shell ${RSYNC_BIN} --daemon --no-detach --config="${RSYNC_CONFIG}" &  # for debugging --log-file=/proc/self/fd/2
-  adb forward tcp:${RSYNC_LOCAL_PORT} tcp:${RSYNC_DEVICE_PORT}
+  adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[root]\npath = /\nuse chroot = false\nread only = true\"" \> "${REMOTE_RSYNC_CONFIG}"
+  touch "${LOCAL_RSYNC_FILTER_FILE}"
+  adb shell ${REMOTE_RSYNC_BIN} --daemon --no-detach --config="${REMOTE_RSYNC_CONFIG}" &  # for debugging --log-file=/proc/self/fd/2
+  adb forward tcp:${LOCAL_RSYNC_PORT} tcp:${REMOTE_RSYNC_PORT}
   sleep 2
 }
 
@@ -82,16 +85,16 @@ mkdir -p "${BACKUP_DIR}"
 
 rsync_setup
 echo "Backing up user data ..."
-echo 'P /TitaniumBackup.apk' >> "${RSYNC_FILTER_FILE}"
-echo 'P /TitaniumBackupPro.apk' >> "${RSYNC_FILTER_FILE}"
-echo 'H .cache/' >> "${RSYNC_FILTER_FILE}"
-echo 'H .thumbs/' >> "${RSYNC_FILTER_FILE}"
-echo 'H .thumbnails/' >> "${RSYNC_FILTER_FILE}"
-echo 'H /Android/data/com.android.providers.media/albumthumbs/' >> "${RSYNC_FILTER_FILE}"
-echo 'H /Android/data/*/cache' >> "${RSYNC_FILTER_FILE}"
-echo 'H /Applidium Image Cache/' >> "${RSYNC_FILTER_FILE}"
-echo 'H /CameraZOOM/.packs/' >> "${RSYNC_FILTER_FILE}"
-echo 'H /CameraZOOM/.temp/' >> "${RSYNC_FILTER_FILE}"
+echo 'P /TitaniumBackup.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
+echo 'P /TitaniumBackupPro.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
+echo 'H .cache/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+echo 'H .thumbs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+echo 'H .thumbnails/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+echo 'H /Android/data/com.android.providers.media/albumthumbs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+echo 'H /Android/data/*/cache' >> "${LOCAL_RSYNC_FILTER_FILE}"
+echo 'H /Applidium Image Cache/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+echo 'H /CameraZOOM/.packs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+echo 'H /CameraZOOM/.temp/' >> "${LOCAL_RSYNC_FILTER_FILE}"
 rsync_pull "${ANDROID_STORAGE}/" "${BACKUP_DIR}/"
 echo "Backing up TitaniumBackup apps ..."
 adb_pull_app com.keramidas.TitaniumBackup "${BACKUP_DIR}/TitaniumBackup.apk"
