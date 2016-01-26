@@ -42,7 +42,7 @@ rsync_cleanup() {
 rsync_push() {
   rsync --partial --progress --archive --human-readable --delete \
     --filter='H .DS_Store' \
-    "$1/" "rsync://localhost:6010/root/$2/"
+    "$1" "rsync://localhost:6010/root/$2"
   : rc $?
 }
 rsync_setup() {
@@ -78,7 +78,7 @@ if [ ! -d "${BACKUP_DIR}/${TB_DIR}" ]; then
   echo "Can't find TitaniumBackup data directory"
   exit 1
 fi
-rsync_push "${BACKUP_DIR}/${TB_DIR}" "${ANDROID_STORAGE}/${TB_DIR}"
+rsync_push "${BACKUP_DIR}/${TB_DIR}/" "${ANDROID_STORAGE}/${TB_DIR}/"
 
 
 # install TitaniumBackup so we can start restoring stuff on the device itself
@@ -96,7 +96,7 @@ done
 echo "Restoring some other things with priority ..."
 for dir in ${PRIO_DIRS}; do
   [[ ! -d "${BACKUP_DIR}/${dir}" ]] && continue
-  rsync_push "${BACKUP_DIR}/${dir}" "${ANDROID_STORAGE}/${dir}"
+  rsync_push "${BACKUP_DIR}/${dir}/" "${ANDROID_STORAGE}/${dir}/"
 done
 
 
@@ -106,7 +106,7 @@ for dir in *; do
     echo "Skipping previously restored '${dir}'"
     continue
   fi
-  rsync_push "${BACKUP_DIR}/${dir}" "${ANDROID_STORAGE}/${dir}"
+  rsync_push "${BACKUP_DIR}/${dir}/" "${ANDROID_STORAGE}/${dir}/"
 done
 rsync_cleanup
 echo "... Done!"
