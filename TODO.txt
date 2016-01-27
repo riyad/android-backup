@@ -1,0 +1,2 @@
+* Add flag to force using the backup rsync
+* Try to get root on the device if possible
