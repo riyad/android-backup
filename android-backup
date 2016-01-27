@@ -53,8 +53,13 @@ rsync_pull() {
 rsync_setup() {
   if [[ -z "$(adb shell which \"${REMOTE_RSYNC_BIN}\")" ]]; then
     echo "Device doesn't have rsync."
+    # try different locations for backup rsync
     local SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    local RSYNC_SRC="${SCRIPT_DIR}/rsync.bkp"
+    for rsync_src_dir in "${SCRIPT_DIR}" "/usr/local/lib/android-backup"; do
+      local RSYNC_SRC="${rsync_src_dir}/rsync.bkp"
+      [[ -e "${RSYNC_SRC}" ]] && break
+    done
+    # have we found a backup rsync?
     if [[ -e "${RSYNC_SRC}" ]]; then
       echo "Providing temporary rsync from ${RSYNC_SRC} ..."
       adb_push "${RSYNC_SRC}" "${REMOTE_TEMP_RSYNC_BIN}"
