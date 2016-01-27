@@ -11,7 +11,7 @@
 readonly ANDROID_STORAGE="/sdcard"
 readonly REMOTE_TEMP_DIR="/data/local/tmp"
 readonly REMOTE_RSYNC_CONFIG="${REMOTE_TEMP_DIR}/rsync.conf"
-readonly REMOTE_RSYNC_PORT=1873  # should be above 1024 to be able to bind to without root
+readonly REMOTE_RSYNC_PORT=1873  # > 1024 so we don't need to be root
 readonly LOCAL_RSYNC_PORT=6010
          REMOTE_RSYNC_BIN="rsync"
 readonly REMOTE_TEMP_RSYNC_BIN="${REMOTE_TEMP_DIR}/rsync"
@@ -70,11 +70,13 @@ rsync_setup() {
       exit 1
     fi
   fi
+  # setup rsync daemon on the device
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
   # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
   adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[root]\npath = /\nuse chroot = false\nread only = true\"" \> "${REMOTE_RSYNC_CONFIG}"
   touch "${LOCAL_RSYNC_FILTER_FILE}"
   adb shell ${REMOTE_RSYNC_BIN} --daemon --no-detach --config="${REMOTE_RSYNC_CONFIG}" &  # for debugging --log-file=/proc/self/fd/2
+  # forward a local port to the rsync daemon on the device
   adb forward tcp:${LOCAL_RSYNC_PORT} tcp:${REMOTE_RSYNC_PORT}
   sleep 2
 }
@@ -113,8 +115,10 @@ mkdir -p "${BACKUP_DIR}"
 
 rsync_setup
 echo "Backing up user data ..."
+# don't let rsync delete these (see below)
 echo 'P /TitaniumBackup.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
 echo 'P /TitaniumBackupPro.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
+# don't sync certain files and directories
 echo 'H .cache/' >> "${LOCAL_RSYNC_FILTER_FILE}"
 echo 'H .thumbs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
 echo 'H .thumbnails/' >> "${LOCAL_RSYNC_FILTER_FILE}"
@@ -123,7 +127,9 @@ echo 'H /Android/data/*/cache' >> "${LOCAL_RSYNC_FILTER_FILE}"
 echo 'H /Applidium Image Cache/' >> "${LOCAL_RSYNC_FILTER_FILE}"
 echo 'H /CameraZOOM/.packs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
 echo 'H /CameraZOOM/.temp/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+# start the backup
 rsync_pull "${ANDROID_STORAGE}/" "${BACKUP_DIR}/"
+# backup TitaniumBackup app separately
 echo "Backing up TitaniumBackup apps ..."
 adb_pull_app com.keramidas.TitaniumBackup "${BACKUP_DIR}/TitaniumBackup.apk"
 adb_pull_app com.keramidas.TitaniumBackupPro "${BACKUP_DIR}/TitaniumBackupPro.apk"
