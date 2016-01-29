@@ -98,7 +98,7 @@ mkdir jni
 wget -O jni/Application.mk https://gist.githubusercontent.com/riyad/59c17ce7a1ade6cfc3c6/raw/b56679f6188d9f56315dcd5e904fad0f9bd1439d/Application.mk
 ```
 
-... and start the build.
+... and start the build with:
 
 ```shell
 export NDK_PROJECT_PATH=`pwd`

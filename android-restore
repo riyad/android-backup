@@ -45,8 +45,8 @@ rsync_cleanup() {
   fi
 }
 rsync_push() {
-  # needs extra --temp-dir option against 'mkstemp "..." (in root) failed: Operation not permitted (1)" errors
-  # needs extra --no-times option against 'failed to set times on "..." (in root): Operation not permitted (1)" errors
+  # needs extra --temp-dir option against 'mkstemp "..." (in root) failed: Operation not permitted (1)' errors
+  # needs extra --no-times option against 'failed to set times on "..." (in root): Operation not permitted (1)' errors
   rsync --partial --progress --archive --human-readable --delete \
     --filter='H .DS_Store' --temp-dir="${REMOTE_TEMP_DIR}" --no-times \
     "$1" "rsync://localhost:6010/root/$2"
