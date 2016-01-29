@@ -47,7 +47,7 @@ rsync_cleanup() {
 rsync_pull() {
   rsync --partial --progress --archive --human-readable --delete \
     --filter='H .DS_Store' --filter=". ${LOCAL_RSYNC_FILTER_FILE}" --prune-empty-dirs \
-    "rsync://localhost:6010/root/$1" "$2"
+    "rsync://localhost:${LOCAL_RSYNC_PORT}/root/$1" "$2"
   : rc $?
 }
 rsync_setup() {

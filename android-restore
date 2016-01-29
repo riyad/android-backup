@@ -49,7 +49,7 @@ rsync_push() {
   # needs extra --no-times option against 'failed to set times on "..." (in root): Operation not permitted (1)' errors
   rsync --partial --progress --archive --human-readable --delete \
     --filter='H .DS_Store' --temp-dir="${REMOTE_TEMP_DIR}" --no-times \
-    "$1" "rsync://localhost:6010/root/$2"
+    "$1" "rsync://localhost:${LOCAL_RSYNC_PORT}/root/$2"
   : rc $?
 }
 rsync_setup() {
