@@ -68,6 +68,45 @@ android-restore <backup-dir>
 
 * Currently restoring will not be able to be able to restore the correct timestamps of files. They'll be set to the current date and time when you're restoring them.
 
+## Extract Rsync for Android Yourself
+
+The provided rsync.bkp file was extracted from CyanogenOS 12.1.1 for OnePlus One via
+
+```shell
+adb shell which rsync
+adb pull /system/xbin/rsync rsync.bkp
+```
+
+## Build Rsync for Android Yourself
+
+NOTE: The following steps assume you already have the Android NDK installed.
+
+Clone the rsync for android source (e.g. from @CyanogenMod) ...
+
+```shell
+git clone https://github.com/CyanogenMod/android_external_rsync.git
+cd android_external_rsync
+# checkout the most recent branch
+git checkout cm-13.0
+```
+
+... create the missing `Application.mk` build file ...
+
+```
+mkdir jni
+# create missing build script (e.g. from https://gist.github.com/riyad/59c17ce7a1ade6cfc3c6)
+wget -O jni/Application.mk https://gist.githubusercontent.com/riyad/59c17ce7a1ade6cfc3c6/raw/b56679f6188d9f56315dcd5e904fad0f9bd1439d/Application.mk
+```
+
+... and start the build.
+
+```shell
+export NDK_PROJECT_PATH=`pwd`
+ndk-build -d rsync
+```
+
+Find your self-build rsync in `obj/local/*/rsync`.
+
 ## Contact and Issues
 
 Please, report all issues on our issue tracker on GitHub: https://github.com/riyad/android-backup/issues
