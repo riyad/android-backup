@@ -11,7 +11,7 @@ GLOBIGNORE=.:..
 # on a running Android /sdcard is symlinked to /storage/emulated/[legacy|0]
 # but in TWRP it's directly mounted to /sdcard (so the other dirs aren't there)
 readonly ANDROID_STORAGE="/sdcard"
-readonly REMOTE_TEMP_DIR="/data/local/tmp"
+readonly REMOTE_TEMP_DIR="/data/local/tmp"  # you can't chmod +x files in /sdcard
 readonly REMOTE_RSYNC_CONFIG="${REMOTE_TEMP_DIR}/rsync.conf"
 readonly REMOTE_RSYNC_PORT=1873  # > 1024 so we don't need to be root
 readonly LOCAL_RSYNC_PORT=6010
