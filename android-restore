@@ -23,6 +23,9 @@ readonly TB_APKS="TitaniumBackup.apk TitaniumBackupPro.apk"
 readonly PRIO_DIRS="WhatsApp DCIM Pictures"
 readonly SKIP_DIRS="${TB_DIR} ${TB_APKS} ${PRIO_DIRS}"
 
+# log everything using syslog
+exec 2>&1 | logger
+
 alias adb="adb -d"
 # thanks to http://stackoverflow.com/questions/8063228/how-do-i-check-if-a-variable-exists-in-a-list-in-bash
 contains() {
