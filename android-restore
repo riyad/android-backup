@@ -51,7 +51,7 @@ rsync_push() {
   # needs extra --temp-dir option against 'mkstemp "..." (in root) failed: Operation not permitted (1)' errors
   # needs extra --no-times option against 'failed to set times on "..." (in root): Operation not permitted (1)' errors
   rsync --partial --progress --archive --human-readable --delete \
-    --filter='H .DS_Store' --temp-dir="${REMOTE_TEMP_DIR}" --no-times \
+    --filter='H .DS_Store' --temp-dir="${REMOTE_TEMP_DIR}" \
     "$1" "rsync://localhost:${LOCAL_RSYNC_PORT}/root/$2"
   : rc $?
 }
@@ -78,7 +78,7 @@ rsync_setup() {
   # setup rsync daemon on the device
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
   # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
-  adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[root]\npath = /\nuse chroot = false\nread only = false\"" \> "${REMOTE_RSYNC_CONFIG}"
+  adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[root]\npath = /\nuid = root\ngid = sdcard_rw\nread only = false\"" \> "${REMOTE_RSYNC_CONFIG}"
   adb shell ${REMOTE_RSYNC_BIN} --daemon --no-detach --config="${REMOTE_RSYNC_CONFIG}" &  # for debugging --log-file=/proc/self/fd/2
   # forward a local port to the rsync daemon on the device
   adb forward tcp:${LOCAL_RSYNC_PORT} tcp:${REMOTE_RSYNC_PORT}
@@ -101,6 +101,8 @@ if [[ ! -d "${BACKUP_DIR}" ]]; then
 fi
 
 
+adb root
+adb wait-for-device
 rsync_setup
 
 
@@ -132,12 +134,8 @@ done
 
 
 echo "Restoring all the rest ..."
-for dir in *; do
-  if $(contains "${SKIP_DIRS}" "${dir}"); then
-    echo "Skipping previously restored '${dir}'"
-    continue
-  fi
-  rsync_push "${BACKUP_DIR}/${dir}/" "${ANDROID_STORAGE}/${dir}/"
-done
+rsync_push "${BACKUP_DIR}/" "${ANDROID_STORAGE}/"
+
+
 rsync_cleanup
 echo "... Done!"
