@@ -132,12 +132,8 @@ done
 
 
 echo "Restoring all the rest ..."
-for dir in *; do
-  if $(contains "${SKIP_DIRS}" "${dir}"); then
-    echo "Skipping previously restored '${dir}'"
-    continue
-  fi
-  rsync_push "${BACKUP_DIR}/${dir}/" "${ANDROID_STORAGE}/${dir}/"
-done
+rsync_push "${BACKUP_DIR}/" "${ANDROID_STORAGE}/"
+
+
 rsync_cleanup
 echo "... Done!"
