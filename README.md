@@ -70,7 +70,7 @@ android-restore <backup-dir>
 
 ## Extract Rsync for Android Yourself
 
-The provided rsync.bkp file was extracted from CyanogenOS 12.1.1 for OnePlus One via
+The provided rsync.bkp file was extracted from LineageOS 14.1-20170131-NIGHTLY for OnePlus X via
 
 ```shell
 adb shell which rsync
