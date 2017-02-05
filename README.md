@@ -84,10 +84,10 @@ NOTE: The following steps assume you already have the Android NDK installed.
 Clone the rsync for android source (e.g. from @CyanogenMod) ...
 
 ```shell
-git clone https://github.com/CyanogenMod/android_external_rsync.git
+git clone https://github.com/LineageOS/android_external_rsync.git
 cd android_external_rsync
 # checkout the most recent branch
-git checkout cm-13.0
+git checkout cm-14.1
 ```
 
 ... create the missing `Application.mk` build file ...
