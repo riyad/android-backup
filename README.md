@@ -70,7 +70,7 @@ android-restore <backup-dir>
 
 ## Extract Rsync for Android Yourself
 
-The provided rsync.bkp file was extracted from CyanogenOS 12.1.1 for OnePlus One via
+The provided rsync.bkp file was extracted from LineageOS 14.1-20170131-NIGHTLY for OnePlus X via
 
 ```shell
 adb shell which rsync
@@ -84,10 +84,10 @@ NOTE: The following steps assume you already have the Android NDK installed.
 Clone the rsync for android source (e.g. from @CyanogenMod) ...
 
 ```shell
-git clone https://github.com/CyanogenMod/android_external_rsync.git
+git clone https://github.com/LineageOS/android_external_rsync.git
 cd android_external_rsync
 # checkout the most recent branch
-git checkout cm-13.0
+git checkout cm-14.1
 ```
 
 ... create the missing `Application.mk` build file ...
