@@ -86,7 +86,7 @@ rsync_setup_remote() {
   # setup rsync daemon on the device
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
   # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
-  [[ -n ${DEBUG} ]] && echo "Writing remote rsync daemon config file to ${REMOTE_RSYNC_CONFIG} ..."
+  [[ -n ${DEBUG} ]] && echo "Writing remote rsync daemon config file ..."
   adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[root]\npath = /\ngid = sdcard_rw\nread only = true\"" \> "${REMOTE_RSYNC_CONFIG}"
   [[ -n ${DEBUG} ]] && echo "Starting remote rsync daemon ..."
   adb shell "${REMOTE_RSYNC_BIN} --daemon --no-detach --config=\"${REMOTE_RSYNC_CONFIG}\" &"  # for debugging --log-file=/proc/self/fd/2
@@ -103,6 +103,8 @@ usage() {
   echo "OPTIONS"
   echo "       --debug  Enable debug mode"
   echo " -r,--use-root  Use adb with root permissions"
+  echo " --only-client  Only run as a client (assumes there's a rsync server on the device already)"
+  echo " --only-server  Only run the rsync server on the device (doesn't sync any data)"
 }
 
 
@@ -198,6 +200,10 @@ if [[ -z ${ONLY_SERVER} ]]; then
   echo 'H /CameraZOOM/.packs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
   echo 'H /CameraZOOM/.temp/' >> "${LOCAL_RSYNC_FILTER_FILE}"
   echo 'H /osmand/tiles/**/*.tile' >> "${LOCAL_RSYNC_FILTER_FILE}"
+
+  [[ -n ${DEBUG} ]] && echo "Contents of local rsync filter file:"
+  [[ -n ${DEBUG} ]] && cat "${LOCAL_RSYNC_FILTER_FILE}" && echo ""
+
   # start the backup
   rsync_pull "${ANDROID_STORAGE}/" "${BACKUP_DIR}/"
   # backup TitaniumBackup app separately
