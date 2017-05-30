@@ -38,14 +38,16 @@ adb_push() {
 adb_rm_dir() {
   adb shell "[[ -d \"$1\" ]] && rm -r \"$1\""
 }
-rsync_cleanup() {
+rsync_cleanup_local() {
+  [[ -e "${LOCAL_RSYNC_FILTER_FILE}" ]] && rm "${LOCAL_RSYNC_FILTER_FILE}"
+}
+rsync_cleanup_remote() {
   adb forward --remove tcp:${LOCAL_RSYNC_PORT}
   adb shell rm -f "${REMOTE_RSYNC_CONFIG}"
   if [[ -f "${REMOTE_TEMP_RSYNC_BIN}" ]]; then
     echo "Cleaning up temporary rsync"
     adb shell rm -f "${REMOTE_TEMP_RSYNC_BIN}"
   fi
-  [[ -e "${LOCAL_RSYNC_FILTER_FILE}" ]] && rm "${LOCAL_RSYNC_FILTER_FILE}"
 }
 rsync_pull() {
   rsync --partial --progress --archive --human-readable --delete \
@@ -53,7 +55,10 @@ rsync_pull() {
     "rsync://localhost:${LOCAL_RSYNC_PORT}/root/$1" "$2"
   : rc $?
 }
-rsync_setup() {
+rsync_setup_local() {
+  touch "${LOCAL_RSYNC_FILTER_FILE}"
+}
+rsync_setup_remote() {
   if [[ -z "$(adb shell which \"${REMOTE_RSYNC_BIN}\")" ]]; then
     echo "Device doesn't have rsync."
     # try different locations for backup rsync
@@ -69,7 +74,7 @@ rsync_setup() {
       adb shell chmod 755 "${REMOTE_TEMP_RSYNC_BIN}"
       REMOTE_RSYNC_BIN="${REMOTE_TEMP_RSYNC_BIN}"
     else
-      echo "Can't provide temprorary rsync."
+      echo "Error: Can't provide temprorary rsync."
       exit 1
     fi
   fi
@@ -77,7 +82,6 @@ rsync_setup() {
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
   # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
   adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[root]\npath = /\ngid = sdcard_rw\nread only = true\"" \> "${REMOTE_RSYNC_CONFIG}"
-  touch "${LOCAL_RSYNC_FILTER_FILE}"
   adb shell "${REMOTE_RSYNC_BIN} --daemon --no-detach --config=\"${REMOTE_RSYNC_CONFIG}\" &"  # for debugging --log-file=/proc/self/fd/2
   # forward a local port to the rsync daemon on the device
   adb forward tcp:${LOCAL_RSYNC_PORT} tcp:${REMOTE_RSYNC_PORT}
@@ -92,6 +96,7 @@ usage() {
   echo "       --debug  Enable debug mode"
   echo " -r,--use-root  Use adb with root permissions"
 }
+
 
 while [[ $# -gt 0 ]]
 do
@@ -164,7 +169,8 @@ fi
 
 
 [[ -n ${USE_ROOT} ]] && adb root
-[[ -z ${ONLY_CLIENT} ]] && rsync_setup
+[[ -z ${ONLY_SERVER} ]] && rsync_setup_local
+[[ -z ${ONLY_CLIENT} ]] && rsync_setup_remote
 
 if [[ -z ${ONLY_SERVER} ]]; then
   echo "Backing up user data ..."
@@ -191,6 +197,7 @@ if [[ -z ${ONLY_SERVER} ]]; then
   adb_pull_app com.keramidas.TitaniumBackupPro "${BACKUP_DIR}/TitaniumBackupPro.apk"
 fi
 
-[[ -z ${ONLY_CLIENT} ]] && rsync_cleanup
+[[ -z ${ONLY_CLIENT} ]] && rsync_cleanup_remote
+[[ -z ${ONLY_SERVER} ]] && rsync_cleanup_local
 [[ -n ${USE_ROOT} ]] && adb unroot
 echo "... Done!"
