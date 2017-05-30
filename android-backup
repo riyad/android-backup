@@ -134,9 +134,13 @@ do
       readonly ONLY_CLIENT=1
       ;;
     *)
-      echo "Error: unknown argument \"$1\""
-      usage
-      exit 1
+      if [[ -n ${ONLY_CLIENT} && $# -eq 1 ]]; then
+        readonly BACKUP_DIR="$1"
+      else
+        echo "Error: unknown argument \"$1\""
+        usage
+        exit 1
+      fi
     ;;
   esac
   shift
@@ -149,7 +153,7 @@ done
 
 if [[ -z ${ONLY_SERVER} ]]; then
   # make sure we get a path to backup stuff into
-  if [[ -z "$1" ]]; then
+  if [[ -z "${BACKUP_DIR}" ]]; then
     backup_dir_name="./bkp_`date '+%Y-%m-%dT%H-%M'`"
     echo "You haven't specified a backup directory."
     read -p "Use '${backup_dir_name}'? [y/n] " yn
@@ -159,8 +163,6 @@ if [[ -z ${ONLY_SERVER} ]]; then
       * ) exit 1;;
     esac
     readonly BACKUP_DIR="${backup_dir_name}"
-  else
-    readonly BACKUP_DIR="$1"
   fi
 
   # make sure we don't overwrite anything by accident
