@@ -39,13 +39,15 @@ adb_rm_dir() {
   adb shell "[[ -d \"$1\" ]] && rm -r \"$1\""
 }
 rsync_cleanup_local() {
+  [[ -n ${DEBUG} ]] && echo "Removing rsync client filter file ..."
   [[ -e "${LOCAL_RSYNC_FILTER_FILE}" ]] && rm "${LOCAL_RSYNC_FILTER_FILE}"
 }
 rsync_cleanup_remote() {
+  [[ -n ${DEBUG} ]] && echo "Removing port-forwarding ..."
   adb forward --remove tcp:${LOCAL_RSYNC_PORT}
+  [[ -n ${DEBUG} ]] && echo "Removing provided remote rsync ..."
   adb shell rm -f "${REMOTE_RSYNC_CONFIG}"
   if [[ -f "${REMOTE_TEMP_RSYNC_BIN}" ]]; then
-    echo "Cleaning up temporary rsync"
     adb shell rm -f "${REMOTE_TEMP_RSYNC_BIN}"
   fi
 }
@@ -56,6 +58,7 @@ rsync_pull() {
   : rc $?
 }
 rsync_setup_local() {
+  [[ -n ${DEBUG} ]] && echo "Creating local rsync filter file ..."
   touch "${LOCAL_RSYNC_FILTER_FILE}"
 }
 rsync_setup_remote() {
@@ -81,8 +84,11 @@ rsync_setup_remote() {
   # setup rsync daemon on the device
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
   # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
+  [[ -n ${DEBUG} ]] && echo "Writing remote rsync daemon config file to ${REMOTE_RSYNC_CONFIG} ..."
   adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[root]\npath = /\ngid = sdcard_rw\nread only = true\"" \> "${REMOTE_RSYNC_CONFIG}"
+  [[ -n ${DEBUG} ]] && echo "Starting remote rsync daemon ..."
   adb shell "${REMOTE_RSYNC_BIN} --daemon --no-detach --config=\"${REMOTE_RSYNC_CONFIG}\" &"  # for debugging --log-file=/proc/self/fd/2
+  [[ -n ${DEBUG} ]] && echo "Setting up port-forwarding ..."
   # forward a local port to the rsync daemon on the device
   adb forward tcp:${LOCAL_RSYNC_PORT} tcp:${REMOTE_RSYNC_PORT}
   sleep 2
@@ -164,6 +170,7 @@ if [[ -z ${ONLY_SERVER} ]]; then
     esac
   fi
 
+  [[ -n ${DEBUG} ]] && echo "Creating ${BACKUP_DIR}."
   mkdir -p "${BACKUP_DIR}"
 fi
 
