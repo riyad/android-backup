@@ -83,7 +83,54 @@ rsync_setup() {
   adb forward tcp:${LOCAL_RSYNC_PORT} tcp:${REMOTE_RSYNC_PORT}
   sleep 2
 }
+usage() {
+  echo "Usage: $0 [OPTIONS] <BACKUP_DIR>"
+  echo "       Backup data from ${ANDROID_STORAGE} on the device to <BACKUP_DIR>."
+  echo "       NOTE: this requires adb and rsync."
+  echo ""
+  echo "OPTIONS"
+  echo "       --debug  Enable debug mode"
+  echo " -r,--use-root  Use adb with root permissions"
+}
 
+while [[ $# -gt 0 ]]
+do
+  case "$1" in
+    --debug)
+      readonly DEBUG=1
+      ;;
+    -r|--use-root)
+      readonly USE_ROOT=1
+      ;;
+    --only-server)
+      if [[ -n ${ONLY_CLIENT} ]]; then
+        echo "Error: Can't be server and client at the same time"
+        usage
+        exit 1
+      fi
+      readonly ONLY_SERVER=1
+      ;;
+    --only-client)
+      if [[ -n ${ONLY_SERVER} ]]; then
+        echo "Error: Can't be server and client at the same time"
+        usage
+        exit 1
+      fi
+      readonly ONLY_CLIENT=1
+      ;;
+    *)
+      echo "Error: unknown argument \"$1\""
+      usage
+      exit 1
+    ;;
+  esac
+  shift
+done
+
+[[ -n ${DEBUG} ]] && echo "DEBUG=${DEBUG}"
+[[ -n ${DEBUG} ]] && echo "ONLY_CLIENT=${ONLY_CLIENT}"
+[[ -n ${DEBUG} ]] && echo "ONLY_SERVER=${ONLY_SERVER}"
+[[ -n ${DEBUG} ]] && echo "USE_ROOT=${USE_ROOT}"
 
 # make sure we get a path to backup stuff into
 if [[ -z "$1" ]]; then
