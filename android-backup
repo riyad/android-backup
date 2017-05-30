@@ -148,7 +148,7 @@ done
 if [[ -z ${ONLY_SERVER} ]]; then
   # make sure we get a path to backup stuff into
   if [[ -z "$1" ]]; then
-    backup_dir_name="./bkp `date '+%Y-%m-%dT%H-%M'`"
+    backup_dir_name="./bkp_`date '+%Y-%m-%dT%H-%M'`"
     echo "You haven't specified a backup directory."
     read -p "Use '${backup_dir_name}'? [y/n] " yn
     case $yn in
