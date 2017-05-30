@@ -132,59 +132,65 @@ done
 [[ -n ${DEBUG} ]] && echo "ONLY_SERVER=${ONLY_SERVER}"
 [[ -n ${DEBUG} ]] && echo "USE_ROOT=${USE_ROOT}"
 
-# make sure we get a path to backup stuff into
-if [[ -z "$1" ]]; then
-  backup_dir_name="./bkp `date '+%Y-%m-%dT%H-%M'`"
-  echo "You haven't specified a backup directory."
-  read -p "Use '${backup_dir_name}'? [y/n] " yn
-  case $yn in
-    [Yy]* ) ;;  # just get through
-    [Nn]* ) exit;;
-    * ) exit 1;;
-  esac
-  readonly BACKUP_DIR="${backup_dir_name}"
-else
-  readonly BACKUP_DIR="$1"
+if [[ -z ${ONLY_SERVER} ]]; then
+  # make sure we get a path to backup stuff into
+  if [[ -z "$1" ]]; then
+    backup_dir_name="./bkp `date '+%Y-%m-%dT%H-%M'`"
+    echo "You haven't specified a backup directory."
+    read -p "Use '${backup_dir_name}'? [y/n] " yn
+    case $yn in
+      [Yy]* ) ;;  # just get through
+      [Nn]* ) exit;;
+      * ) exit 1;;
+    esac
+    readonly BACKUP_DIR="${backup_dir_name}"
+  else
+    readonly BACKUP_DIR="$1"
+  fi
+
+  # make sure we don't overwrite anything by accident
+  if [[ -d "${BACKUP_DIR}" ]]; then
+    echo "WARNING: '${BACKUP_DIR}' exists already!"
+    read -p "Are you sure you want to overwrite files in there? [Yes/No] " yn
+    case $yn in
+      'Yes'* ) ;;  # just get through
+      'No'* ) exit;;
+      * ) exit 1;;
+    esac
+  fi
+
+  mkdir -p "${BACKUP_DIR}"
 fi
 
 
-# make sure we don't overwrite anything by accident
-if [[ -d "${BACKUP_DIR}" ]]; then
-  echo "WARNING: '${BACKUP_DIR}' exists already!"
-  read -p "Are you sure you want to overwrite files in there? [Yes/No] " yn
-  case $yn in
-    'Yes'* ) ;;  # just get through
-    'No'* ) exit;;
-    * ) exit 1;;
-  esac
+[[ -n ${USE_ROOT} ]] && adb root
+[[ -z ${ONLY_CLIENT} ]] && rsync_setup
+
+if [[ -z ${ONLY_SERVER} ]]; then
+  echo "Backing up user data ..."
+  # ignore known cache files
+  echo 'H .DS_Store' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # don't let rsync delete these (see below)
+  echo 'P /TitaniumBackup.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'P /TitaniumBackupPro.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # don't sync certain files and directories
+  echo 'H .cache/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H .thumbs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H .thumbnails/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /Android/data/com.android.providers.media/albumthumbs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /Android/data/*/cache' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /Applidium Image Cache/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /CameraZOOM/.packs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /CameraZOOM/.temp/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /osmand/tiles/**/*.tile' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # start the backup
+  rsync_pull "${ANDROID_STORAGE}/" "${BACKUP_DIR}/"
+  # backup TitaniumBackup app separately
+  echo "Backing up TitaniumBackup apps ..."
+  adb_pull_app com.keramidas.TitaniumBackup "${BACKUP_DIR}/TitaniumBackup.apk"
+  adb_pull_app com.keramidas.TitaniumBackupPro "${BACKUP_DIR}/TitaniumBackupPro.apk"
 fi
 
-
-mkdir -p "${BACKUP_DIR}"
-
-
-rsync_setup
-echo "Backing up user data ..."
-# ignore known cache files
-echo 'H .DS_Store' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# don't let rsync delete these (see below)
-echo 'P /TitaniumBackup.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'P /TitaniumBackupPro.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# don't sync certain files and directories
-echo 'H .cache/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H .thumbs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H .thumbnails/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /Android/data/com.android.providers.media/albumthumbs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /Android/data/*/cache' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /Applidium Image Cache/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /CameraZOOM/.packs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /CameraZOOM/.temp/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /osmand/tiles/**/*.tile' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# start the backup
-rsync_pull "${ANDROID_STORAGE}/" "${BACKUP_DIR}/"
-# backup TitaniumBackup app separately
-echo "Backing up TitaniumBackup apps ..."
-adb_pull_app com.keramidas.TitaniumBackup "${BACKUP_DIR}/TitaniumBackup.apk"
-adb_pull_app com.keramidas.TitaniumBackupPro "${BACKUP_DIR}/TitaniumBackupPro.apk"
-rsync_cleanup
+[[ -z ${ONLY_CLIENT} ]] && rsync_cleanup
+[[ -n ${USE_ROOT} ]] && adb unroot
 echo "... Done!"
