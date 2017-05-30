@@ -43,6 +43,8 @@ rsync_cleanup_local() {
   [[ -e "${LOCAL_RSYNC_FILTER_FILE}" ]] && rm "${LOCAL_RSYNC_FILTER_FILE}"
 }
 rsync_cleanup_remote() {
+  [[ -n ${DEBUG} ]] && echo "Killing rsync daemon ..."
+  adb shell killall "${REMOTE_RSYNC_BIN}"
   [[ -n ${DEBUG} ]] && echo "Removing port-forwarding ..."
   adb forward --remove tcp:${LOCAL_RSYNC_PORT}
   [[ -n ${DEBUG} ]] && echo "Removing provided remote rsync ..."
