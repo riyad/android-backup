@@ -90,11 +90,20 @@ rsync_setup_remote() {
   # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
   [[ -n ${DEBUG} ]] && echo "Writing remote rsync daemon config file ..."
   adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[${REMOTE_RSYNC_MODULE}]\npath = ${ANDROID_STORAGE}\ngid = sdcard_rw\nread only = true\"" \> "${REMOTE_RSYNC_CONFIG}"
-  adb shell "${REMOTE_RSYNC_BIN} --daemon --no-detach --config=\"${REMOTE_RSYNC_CONFIG}\" &"  # for debugging --log-file=/proc/self/fd/2
+
   [[ -n ${DEBUG} ]] && echo "Setting up port-forwarding ..."
   # forward a local port to the rsync daemon on the device
   adb forward tcp:${LOCAL_RSYNC_PORT} tcp:${REMOTE_RSYNC_PORT}
   sleep 2
+
+  if [[ -n ${DEBUG} ]]; then
+    echo "Starting remote rsync daemon ..."
+    echo "Press \"any\" key to make rsyncd quit."
+    debug_options=" --verbose --log-file=/proc/self/fd/2"
+    adb shell "${REMOTE_RSYNC_BIN} --daemon --no-detach --config=\"${REMOTE_RSYNC_CONFIG}\" ${debug_options}"
+  else
+    adb shell "${REMOTE_RSYNC_BIN} --daemon --no-detach --config=\"${REMOTE_RSYNC_CONFIG}\" &"
+  fi
 }
 usage() {
   echo "Usage: $0 [OPTIONS] <BACKUP_DIR>"
