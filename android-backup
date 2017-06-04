@@ -55,7 +55,8 @@ rsync_cleanup_remote() {
   fi
 }
 rsync_pull() {
-  rsync --partial --progress --archive --human-readable --delete \
+  [[ -n ${DEBUG} ]] && debug_options=" --verbose --debug=ALL"
+  rsync ${debug_options} --partial --progress --archive --human-readable --delete \
     --filter=". ${LOCAL_RSYNC_FILTER_FILE}" --prune-empty-dirs \
     "rsync://localhost:${LOCAL_RSYNC_PORT}/$1" "$2"
   : rc $?
