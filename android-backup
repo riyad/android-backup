@@ -180,6 +180,17 @@ if [[ -z ${ONLY_SERVER} ]]; then
   mkdir -p "${BACKUP_DIR}"
 fi
 
+[[ -n ${DEBUG} ]] && echo "BACKUP_DIR=${BACKUP_DIR}"
+
+[[ -n ${DEBUG} ]] && echo "ANDROID_STORAGE=${ANDROID_STORAGE}"
+[[ -n ${DEBUG} ]] && echo "REMOTE_TEMP_DIR=${REMOTE_TEMP_DIR}"
+[[ -n ${DEBUG} ]] && echo "REMOTE_RSYNC_CONFIG=${REMOTE_RSYNC_CONFIG}"
+[[ -n ${DEBUG} ]] && echo "REMOTE_RSYNC_PORT=${REMOTE_RSYNC_PORT}"
+[[ -n ${DEBUG} ]] && echo "LOCAL_RSYNC_PORT=${LOCAL_RSYNC_PORT}"
+[[ -n ${DEBUG} ]] && echo "REMOTE_RSYNC_BIN=${REMOTE_RSYNC_BIN}"
+[[ -n ${DEBUG} ]] && echo "REMOTE_RSYNC_MODULE=${REMOTE_RSYNC_MODULE}"
+[[ -n ${DEBUG} ]] && echo "REMOTE_TEMP_RSYNC_BIN=${REMOTE_TEMP_RSYNC_BIN}"
+[[ -n ${DEBUG} ]] && echo "LOCAL_RSYNC_FILTER_FILE=${LOCAL_RSYNC_FILTER_FILE}"
 
 [[ -n ${USE_ROOT} ]] && adb root
 [[ -z ${ONLY_SERVER} ]] && rsync_setup_local
