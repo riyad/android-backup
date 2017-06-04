@@ -14,6 +14,7 @@ readonly REMOTE_RSYNC_CONFIG="${REMOTE_TEMP_DIR}/rsync.conf"
 readonly REMOTE_RSYNC_PORT=1873  # > 1024 so we don't need to be root
 readonly LOCAL_RSYNC_PORT=6010
          REMOTE_RSYNC_BIN="rsync"
+readonly REMOTE_RSYNC_MODULE="android_backup"
 readonly REMOTE_TEMP_RSYNC_BIN="${REMOTE_TEMP_DIR}/rsync"
 readonly LOCAL_RSYNC_FILTER_FILE=`mktemp -t "$(basename $0)"`
 
@@ -56,7 +57,7 @@ rsync_cleanup_remote() {
 rsync_pull() {
   rsync --partial --progress --archive --human-readable --delete \
     --filter=". ${LOCAL_RSYNC_FILTER_FILE}" --prune-empty-dirs \
-    "rsync://localhost:${LOCAL_RSYNC_PORT}/root/$1" "$2"
+    "rsync://localhost:${LOCAL_RSYNC_PORT}/$1" "$2"
   : rc $?
 }
 rsync_setup_local() {
@@ -87,8 +88,7 @@ rsync_setup_remote() {
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
   # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
   [[ -n ${DEBUG} ]] && echo "Writing remote rsync daemon config file ..."
-  adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[root]\npath = /\ngid = sdcard_rw\nread only = true\"" \> "${REMOTE_RSYNC_CONFIG}"
-  [[ -n ${DEBUG} ]] && echo "Starting remote rsync daemon ..."
+  adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[${REMOTE_RSYNC_MODULE}]\npath = ${ANDROID_STORAGE}\ngid = sdcard_rw\nread only = true\"" \> "${REMOTE_RSYNC_CONFIG}"
   adb shell "${REMOTE_RSYNC_BIN} --daemon --no-detach --config=\"${REMOTE_RSYNC_CONFIG}\" &"  # for debugging --log-file=/proc/self/fd/2
   [[ -n ${DEBUG} ]] && echo "Setting up port-forwarding ..."
   # forward a local port to the rsync daemon on the device
@@ -207,7 +207,7 @@ if [[ -z ${ONLY_SERVER} ]]; then
   [[ -n ${DEBUG} ]] && cat "${LOCAL_RSYNC_FILTER_FILE}" && echo ""
 
   # start the backup
-  rsync_pull "${ANDROID_STORAGE}/" "${BACKUP_DIR}/"
+  rsync_pull "${REMOTE_RSYNC_MODULE}/" "${BACKUP_DIR}/"
   # backup TitaniumBackup app separately
   echo "Backing up TitaniumBackup apps ..."
   adb_pull_app com.keramidas.TitaniumBackup "${BACKUP_DIR}/TitaniumBackup.apk"
