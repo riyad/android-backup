@@ -144,7 +144,7 @@ do
       readonly ONLY_CLIENT=1
       ;;
     *)
-      if [[ -n ${ONLY_CLIENT} && $# -eq 1 ]]; then
+      if [[ -z ${ONLY_SERVER} && $# -eq 1 ]]; then
         readonly BACKUP_DIR="$1"
       else
         echo "Error: unknown argument \"$1\""
