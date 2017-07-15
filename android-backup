@@ -55,7 +55,7 @@ rsync_cleanup_remote() {
   fi
 }
 rsync_pull_module() {
-  [[ -n ${DEBUG} ]] && debug_options=" --verbose --debug=ALL"
+  [[ -n ${DEBUG} ]] && local debug_options=" --verbose --debug=ALL"
   rsync ${debug_options} --partial --progress --archive --human-readable --delete \
     --filter=". ${LOCAL_RSYNC_FILTER_FILE}" --prune-empty-dirs \
     "rsync://localhost:${LOCAL_RSYNC_PORT}/${REMOTE_RSYNC_MODULE}/$1" "$2"
@@ -69,8 +69,8 @@ rsync_setup_remote() {
   if [[ -z "$(adb shell which \"${REMOTE_RSYNC_BIN}\")" ]]; then
     echo "Device doesn't have rsync."
     # try different locations for backup rsync
-    local SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    for rsync_src_dir in "${SCRIPT_DIR}" "/usr/local/lib/android-backup"; do
+    local script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    for rsync_src_dir in "${script_dir}" "/usr/local/lib/android-backup"; do
       local RSYNC_SRC="${rsync_src_dir}/rsync.bkp"
       [[ -e "${RSYNC_SRC}" ]] && break
     done
