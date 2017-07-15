@@ -1,2 +1,4 @@
 * Add flag to force using the backup rsync
-* Try to get root on the device if possible
+* Try to get root on the device if possible (without chroot?)
+
+* save rsyncd pid in pid file (and kill it using that)
