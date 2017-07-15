@@ -117,125 +117,128 @@ usage() {
   echo " --only-server  Only run the rsync server on the device (doesn't sync any data)"
 }
 
-
-while [[ $# -gt 0 ]]
-do
-  case "$1" in
-    --debug)
-      readonly DEBUG=1
+main() {
+  while [[ $# -gt 0 ]]
+  do
+    case "$1" in
+      --debug)
+        readonly DEBUG=1
+        ;;
+      -r|--use-root)
+        readonly USE_ROOT=1
+        ;;
+      --only-server)
+        if [[ -n ${ONLY_CLIENT} ]]; then
+          echo "Error: Can't be server and client at the same time"
+          usage
+          exit 1
+        fi
+        readonly ONLY_SERVER=1
+        ;;
+      --only-client)
+        if [[ -n ${ONLY_SERVER} ]]; then
+          echo "Error: Can't be server and client at the same time"
+          usage
+          exit 1
+        fi
+        readonly ONLY_CLIENT=1
+        ;;
+      *)
+        if [[ -z ${ONLY_SERVER} && $# -eq 1 ]]; then
+          readonly BACKUP_DIR="$1"
+        else
+          echo "Error: unknown argument \"$1\""
+          usage
+          exit 1
+        fi
       ;;
-    -r|--use-root)
-      readonly USE_ROOT=1
-      ;;
-    --only-server)
-      if [[ -n ${ONLY_CLIENT} ]]; then
-        echo "Error: Can't be server and client at the same time"
-        usage
-        exit 1
-      fi
-      readonly ONLY_SERVER=1
-      ;;
-    --only-client)
-      if [[ -n ${ONLY_SERVER} ]]; then
-        echo "Error: Can't be server and client at the same time"
-        usage
-        exit 1
-      fi
-      readonly ONLY_CLIENT=1
-      ;;
-    *)
-      if [[ -z ${ONLY_SERVER} && $# -eq 1 ]]; then
-        readonly BACKUP_DIR="$1"
-      else
-        echo "Error: unknown argument \"$1\""
-        usage
-        exit 1
-      fi
-    ;;
-  esac
-  shift
-done
-
-[[ -n ${DEBUG} ]] && echo "DEBUG=${DEBUG}"
-[[ -n ${DEBUG} ]] && echo "ONLY_CLIENT=${ONLY_CLIENT}"
-[[ -n ${DEBUG} ]] && echo "ONLY_SERVER=${ONLY_SERVER}"
-[[ -n ${DEBUG} ]] && echo "USE_ROOT=${USE_ROOT}"
-
-if [[ -z ${ONLY_SERVER} ]]; then
-  # make sure we get a path to backup stuff into
-  if [[ -z "${BACKUP_DIR}" ]]; then
-    backup_dir_name="./bkp_`date '+%Y-%m-%dT%H-%M'`"
-    echo "You haven't specified a backup directory."
-    read -p "Use '${backup_dir_name}'? [y/n] " yn
-    case $yn in
-      [Yy]* ) ;;  # just get through
-      [Nn]* ) exit;;
-      * ) exit 1;;
     esac
-    readonly BACKUP_DIR="${backup_dir_name}"
+    shift
+  done
+
+  [[ -n ${DEBUG} ]] && echo "DEBUG=${DEBUG}"
+  [[ -n ${DEBUG} ]] && echo "ONLY_CLIENT=${ONLY_CLIENT}"
+  [[ -n ${DEBUG} ]] && echo "ONLY_SERVER=${ONLY_SERVER}"
+  [[ -n ${DEBUG} ]] && echo "USE_ROOT=${USE_ROOT}"
+
+  if [[ -z ${ONLY_SERVER} ]]; then
+    # make sure we get a path to backup stuff into
+    if [[ -z "${BACKUP_DIR}" ]]; then
+      backup_dir_name="./bkp_`date '+%Y-%m-%dT%H-%M'`"
+      echo "You haven't specified a backup directory."
+      read -p "Use '${backup_dir_name}'? [y/n] " yn
+      case $yn in
+        [Yy]* ) ;;  # just get through
+        [Nn]* ) exit;;
+        * ) exit 1;;
+      esac
+      readonly BACKUP_DIR="${backup_dir_name}"
+    fi
+
+    # make sure we don't overwrite anything by accident
+    if [[ -d "${BACKUP_DIR}" ]]; then
+      echo "WARNING: '${BACKUP_DIR}' exists already!"
+      read -p "Are you sure you want to overwrite files in there? [Yes/No] " yn
+      case $yn in
+        'Yes'* ) ;;  # just get through
+        'No'* ) exit;;
+        * ) exit 1;;
+      esac
+    fi
+
+    [[ -n ${DEBUG} ]] && echo "Creating ${BACKUP_DIR}."
+    mkdir -p "${BACKUP_DIR}"
   fi
 
-  # make sure we don't overwrite anything by accident
-  if [[ -d "${BACKUP_DIR}" ]]; then
-    echo "WARNING: '${BACKUP_DIR}' exists already!"
-    read -p "Are you sure you want to overwrite files in there? [Yes/No] " yn
-    case $yn in
-      'Yes'* ) ;;  # just get through
-      'No'* ) exit;;
-      * ) exit 1;;
-    esac
+  [[ -n ${DEBUG} ]] && echo "BACKUP_DIR=${BACKUP_DIR}"
+
+  [[ -n ${DEBUG} ]] && echo "ANDROID_STORAGE=${ANDROID_STORAGE}"
+  [[ -n ${DEBUG} ]] && echo "REMOTE_TEMP_DIR=${REMOTE_TEMP_DIR}"
+  [[ -n ${DEBUG} ]] && echo "REMOTE_RSYNC_CONFIG=${REMOTE_RSYNC_CONFIG}"
+  [[ -n ${DEBUG} ]] && echo "REMOTE_RSYNC_PORT=${REMOTE_RSYNC_PORT}"
+  [[ -n ${DEBUG} ]] && echo "LOCAL_RSYNC_PORT=${LOCAL_RSYNC_PORT}"
+  [[ -n ${DEBUG} ]] && echo "REMOTE_RSYNC_BIN=${REMOTE_RSYNC_BIN}"
+  [[ -n ${DEBUG} ]] && echo "REMOTE_RSYNC_MODULE=${REMOTE_RSYNC_MODULE}"
+  [[ -n ${DEBUG} ]] && echo "REMOTE_TEMP_RSYNC_BIN=${REMOTE_TEMP_RSYNC_BIN}"
+  [[ -n ${DEBUG} ]] && echo "LOCAL_RSYNC_FILTER_FILE=${LOCAL_RSYNC_FILTER_FILE}"
+
+  [[ -n ${USE_ROOT} ]] && adb root
+  [[ -z ${ONLY_SERVER} ]] && rsync_setup_local
+  [[ -z ${ONLY_CLIENT} ]] && rsync_setup_remote
+
+  if [[ -z ${ONLY_SERVER} ]]; then
+    echo "Backing up user data ..."
+    # ignore known cache files
+    echo 'H .DS_Store' >> "${LOCAL_RSYNC_FILTER_FILE}"
+    # don't let rsync delete these (see below)
+    echo 'P /TitaniumBackup.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
+    echo 'P /TitaniumBackupPro.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
+    # don't sync certain files and directories
+    echo 'H .cache/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+    echo 'H .thumbs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+    echo 'H .thumbnails/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+    echo 'H /Android/data/com.android.providers.media/albumthumbs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+    echo 'H /Android/data/*/cache' >> "${LOCAL_RSYNC_FILTER_FILE}"
+    echo 'H /Applidium Image Cache/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+    echo 'H /CameraZOOM/.packs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+    echo 'H /CameraZOOM/.temp/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+    echo 'H /osmand/tiles/**/*.tile' >> "${LOCAL_RSYNC_FILTER_FILE}"
+
+    [[ -n ${DEBUG} ]] && echo "Contents of local rsync filter file:"
+    [[ -n ${DEBUG} ]] && cat "${LOCAL_RSYNC_FILTER_FILE}" && echo ""
+
+    # start the backup
+    rsync_pull_module "${ANDROID_STORAGE}/DCIM" "${BACKUP_DIR}/"
+    # backup TitaniumBackup app separately
+    echo "Backing up TitaniumBackup apps ..."
+    adb_pull_app com.keramidas.TitaniumBackup "${BACKUP_DIR}/TitaniumBackup.apk"
+    adb_pull_app com.keramidas.TitaniumBackupPro "${BACKUP_DIR}/TitaniumBackupPro.apk"
   fi
 
-  [[ -n ${DEBUG} ]] && echo "Creating ${BACKUP_DIR}."
-  mkdir -p "${BACKUP_DIR}"
-fi
+  [[ -z ${ONLY_CLIENT} ]] && rsync_cleanup_remote
+  [[ -z ${ONLY_SERVER} ]] && rsync_cleanup_local
+  [[ -n ${USE_ROOT} ]] && adb unroot
+  echo "... Done!"
+}
 
-[[ -n ${DEBUG} ]] && echo "BACKUP_DIR=${BACKUP_DIR}"
-
-[[ -n ${DEBUG} ]] && echo "ANDROID_STORAGE=${ANDROID_STORAGE}"
-[[ -n ${DEBUG} ]] && echo "REMOTE_TEMP_DIR=${REMOTE_TEMP_DIR}"
-[[ -n ${DEBUG} ]] && echo "REMOTE_RSYNC_CONFIG=${REMOTE_RSYNC_CONFIG}"
-[[ -n ${DEBUG} ]] && echo "REMOTE_RSYNC_PORT=${REMOTE_RSYNC_PORT}"
-[[ -n ${DEBUG} ]] && echo "LOCAL_RSYNC_PORT=${LOCAL_RSYNC_PORT}"
-[[ -n ${DEBUG} ]] && echo "REMOTE_RSYNC_BIN=${REMOTE_RSYNC_BIN}"
-[[ -n ${DEBUG} ]] && echo "REMOTE_RSYNC_MODULE=${REMOTE_RSYNC_MODULE}"
-[[ -n ${DEBUG} ]] && echo "REMOTE_TEMP_RSYNC_BIN=${REMOTE_TEMP_RSYNC_BIN}"
-[[ -n ${DEBUG} ]] && echo "LOCAL_RSYNC_FILTER_FILE=${LOCAL_RSYNC_FILTER_FILE}"
-
-[[ -n ${USE_ROOT} ]] && adb root
-[[ -z ${ONLY_SERVER} ]] && rsync_setup_local
-[[ -z ${ONLY_CLIENT} ]] && rsync_setup_remote
-
-if [[ -z ${ONLY_SERVER} ]]; then
-  echo "Backing up user data ..."
-  # ignore known cache files
-  echo 'H .DS_Store' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # don't let rsync delete these (see below)
-  echo 'P /TitaniumBackup.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  echo 'P /TitaniumBackupPro.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # don't sync certain files and directories
-  echo 'H .cache/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  echo 'H .thumbs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  echo 'H .thumbnails/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  echo 'H /Android/data/com.android.providers.media/albumthumbs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  echo 'H /Android/data/*/cache' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  echo 'H /Applidium Image Cache/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  echo 'H /CameraZOOM/.packs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  echo 'H /CameraZOOM/.temp/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  echo 'H /osmand/tiles/**/*.tile' >> "${LOCAL_RSYNC_FILTER_FILE}"
-
-  [[ -n ${DEBUG} ]] && echo "Contents of local rsync filter file:"
-  [[ -n ${DEBUG} ]] && cat "${LOCAL_RSYNC_FILTER_FILE}" && echo ""
-
-  # start the backup
-  rsync_pull_module "${ANDROID_STORAGE}/DCIM" "${BACKUP_DIR}/"
-  # backup TitaniumBackup app separately
-  echo "Backing up TitaniumBackup apps ..."
-  adb_pull_app com.keramidas.TitaniumBackup "${BACKUP_DIR}/TitaniumBackup.apk"
-  adb_pull_app com.keramidas.TitaniumBackupPro "${BACKUP_DIR}/TitaniumBackupPro.apk"
-fi
-
-[[ -z ${ONLY_CLIENT} ]] && rsync_cleanup_remote
-[[ -z ${ONLY_SERVER} ]] && rsync_cleanup_local
-[[ -n ${USE_ROOT} ]] && adb unroot
-echo "... Done!"
+main "$@"
