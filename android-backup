@@ -101,6 +101,9 @@ rsync_setup_remote() {
   adb forward tcp:${LOCAL_RSYNC_PORT} tcp:${REMOTE_RSYNC_PORT}
   sleep 2
 
+  [[ -n ${DEBUG} ]] && echo "Killing rsync daemon ..."
+  adb shell killall "${REMOTE_RSYNC_BIN}"
+
   if [[ -n ${DEBUG} ]]; then
     echo "Starting remote rsync daemon ..."
     local debug_options=" --verbose --log-file=/proc/self/fd/2"
