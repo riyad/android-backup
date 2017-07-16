@@ -89,7 +89,12 @@ rsync_setup_remote() {
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
   # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
   [[ -n ${DEBUG} ]] && echo "Writing remote rsync daemon config file ..."
-  adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[${REMOTE_RSYNC_MODULE}]\npath = /\ngid = sdcard_rw\nread only = true\"" \> "${REMOTE_RSYNC_CONFIG}"
+  if [[ -n ${USE_ROOT} ]]; then
+    local root_options="use chroot = true\ngid = sdcard_rw\n"
+  else
+    local root_options="use chroot = false\n"
+  fi
+  adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[${REMOTE_RSYNC_MODULE}]\npath = /\n${root_options}read only = true\nlist = false\"" \> "${REMOTE_RSYNC_CONFIG}"
 
   [[ -n ${DEBUG} ]] && echo "Setting up port-forwarding ..."
   # forward a local port to the rsync daemon on the device
