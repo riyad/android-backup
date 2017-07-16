@@ -103,8 +103,14 @@ rsync_setup_remote() {
 
   if [[ -n ${DEBUG} ]]; then
     echo "Starting remote rsync daemon ..."
-    echo "Press \"any\" key to make rsyncd quit."
-    debug_options=" --verbose --log-file=/proc/self/fd/2"
+    local debug_options=" --verbose --log-file=/proc/self/fd/2"
+    if [[ -z ${ONLY_SERVER} ]]; then
+      # starts rsync in the background
+      debug_options="${debug_options} &"
+    else
+      # starts rsync in the foreground
+      echo "Press \"any\" key to make rsyncd quit."
+    fi
     adb shell "${REMOTE_RSYNC_BIN} --daemon --no-detach --config=\"${REMOTE_RSYNC_CONFIG}\" ${debug_options}"
   else
     adb shell "${REMOTE_RSYNC_BIN} --daemon --no-detach --config=\"${REMOTE_RSYNC_CONFIG}\" &"
