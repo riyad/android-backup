@@ -15,7 +15,7 @@ readonly REMOTE_RSYNC_PORT=1873  # > 1024 so we don't need to be root
 readonly LOCAL_RSYNC_PORT=6010
          REMOTE_RSYNC_BIN="rsync"
 readonly REMOTE_TEMP_RSYNC_BIN="${REMOTE_TEMP_DIR}/rsync"
-readonly LOCAL_RSYNC_FILTER_FILE=`mktemp -t "$(basename $0)"`
+readonly LOCAL_RSYNC_FILTER_FILE=`mktemp -t "$(basename $0).XXXXXXXXXX"`
 
 # log everything using syslog
 exec 2>&1 | logger
