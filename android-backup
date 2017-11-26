@@ -16,7 +16,7 @@ readonly LOCAL_RSYNC_PORT=6010
          REMOTE_RSYNC_BIN="rsync"
 readonly REMOTE_RSYNC_MODULE="android_backup"
 readonly REMOTE_TEMP_RSYNC_BIN="${REMOTE_TEMP_DIR}/rsync"
-readonly LOCAL_RSYNC_FILTER_FILE=`mktemp -t "$(basename $0)"`
+readonly LOCAL_RSYNC_FILTER_FILE=`mktemp -t "$(basename $0).XXXXXXXXXX"`
 
 # log everything using syslog
 exec 2>&1 | logger
