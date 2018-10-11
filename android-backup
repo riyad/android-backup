@@ -6,9 +6,6 @@
 # It'll also back up your current TitaniumBackup apps for faster restoration.
 
 
-# on a running Android /sdcard is symlinked to /storage/emulated/[legacy|0]
-# but in TWRP it's directly mounted to /sdcard (so the other dirs aren't there)
-readonly ANDROID_STORAGE="/sdcard"
 readonly REMOTE_TEMP_DIR="/data/local/tmp"  # you can't chmod +x files in /sdcard
 readonly REMOTE_RSYNC_CONFIG="${REMOTE_TEMP_DIR}/rsync.conf"
 readonly REMOTE_RSYNC_PORT=1873  # > 1024 so we don't need to be root
@@ -16,6 +13,10 @@ readonly LOCAL_RSYNC_PORT=6010
          REMOTE_RSYNC_BIN="rsync"
 readonly REMOTE_TEMP_RSYNC_BIN="${REMOTE_TEMP_DIR}/rsync"
 readonly LOCAL_RSYNC_FILTER_FILE=`mktemp -t "$(basename $0).XXXXXXXXXX"`
+# on a running Android /sdcard is symlinked to /storage/emulated/[legacy|0]
+# but in TWRP it's directly mounted to /sdcard (so the other dirs aren't there)
+readonly ANDROID_DEFAULT_STORAGE="/sdcard"
+         REMOTE_STORAGES_TO_BACKUP=("${ANDROID_DEFAULT_STORAGE}")
 
 # log everything using syslog
 exec 2>&1 | logger
@@ -85,6 +86,21 @@ rsync_setup() {
 }
 
 
+find_remote_storages_to_backup() {
+  local android_storage_base="/storage"
+  local storage_candidates="$(adb shell ls "${android_storage_base}")"
+
+  for storage_name in ${storage_candidates}
+  do
+    # assume emulated/0 is covered by /sdcard and everything else isn't relevant
+    [[ "${storage_name}" = 'emulated' ]] && continue
+    [[ "${storage_name}" = 'self' ]] && continue
+
+    REMOTE_STORAGES_TO_BACKUP+=("${android_storage_base}/${storage_name}")
+  done
+}
+
+
 main() {
   # make sure we get a path to backup stuff into
   if [[ -z "$1" ]]; then
@@ -101,7 +117,6 @@ main() {
     readonly BACKUP_DIR="$1"
   fi
 
-
   # make sure we don't overwrite anything by accident
   if [[ -d "${BACKUP_DIR}" ]]; then
     echo "WARNING: '${BACKUP_DIR}' exists already!"
@@ -113,8 +128,12 @@ main() {
     esac
   fi
 
-
   mkdir -p "${BACKUP_DIR}"
+
+
+  # will add entries to REMOTE_STORAGES_TO_BACKUP
+  find_remote_storages_to_backup
+
 
   rsync_setup
   echo "Backing up user data ..."
@@ -146,11 +165,16 @@ main() {
   echo 'H /Movies/' >> "${LOCAL_RSYNC_FILTER_FILE}"
   echo 'H /Podcasts/' >> "${LOCAL_RSYNC_FILTER_FILE}"
   # start the backup
-  rsync_pull "${ANDROID_STORAGE}/" "${BACKUP_DIR}/"
+  for remote_storage in ${REMOTE_STORAGES_TO_BACKUP[@]}
+  do
+    rsync_pull "${remote_storage}/" "${BACKUP_DIR}/$(basename "${remote_storage}")/"
+  done
+  
   # backup TitaniumBackup app separately
   echo "Backing up TitaniumBackup apps ..."
   adb_pull_app com.keramidas.TitaniumBackup "${BACKUP_DIR}/TitaniumBackup.apk"
   adb_pull_app com.keramidas.TitaniumBackupPro "${BACKUP_DIR}/TitaniumBackupPro.apk"
+  
   rsync_cleanup
   echo "... Done!"
 }
