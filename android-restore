@@ -17,6 +17,7 @@ readonly REMOTE_RSYNC_PORT=1873  # > 1024 so we don't need to be root
 readonly LOCAL_RSYNC_PORT=6010
          REMOTE_RSYNC_BIN="rsync"
 readonly REMOTE_TEMP_RSYNC_BIN="${REMOTE_TEMP_DIR}/rsync"
+readonly USER_RSYNC_FILTER_FILE="$HOME/.android_backup/rsync_restore.filter"
 readonly LOCAL_RSYNC_FILTER_FILE=`mktemp -t "$(basename $0).XXXXXXXXXX"`
 # these are relative to BACKUP_DIR
 readonly TB_DIR="TitaniumBackup"
@@ -87,6 +88,32 @@ rsync_setup() {
   adb forward tcp:${LOCAL_RSYNC_PORT} tcp:${REMOTE_RSYNC_PORT}
   sleep 2
 }
+rsync_setup_local_filter_file() {
+  cat <<-EOT >> "${LOCAL_RSYNC_FILTER_FILE}"
+# ignore known cache files
+H .DS_Store
+# don't sync custom files
+H /TitaniumBackup.apk
+H /TitaniumBackupPro.apk
+# preserve standard Andoid directories
+# P Alarms/
+# P Android/
+# P DCIM/
+# P Download/
+# P Movies/
+# P Music/
+# P Notifications/
+# P Pictures/
+# P Podcasts/
+# P Ringtones/
+# P storage/
+EOT
+
+  # include user-defined rules
+  if [[ -e "${USER_RSYNC_FILTER_FILE}" ]]; then
+    echo "merge ${USER_RSYNC_FILTER_FILE}" >> "${LOCAL_RSYNC_FILTER_FILE}"
+  fi
+}
 
 
 main() {
@@ -106,23 +133,7 @@ main() {
 
 
   rsync_setup
-  # ignore known cache files
-  echo 'H .DS_Store' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # don't sync custom files
-  echo 'H /TitaniumBackup.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  echo 'H /TitaniumBackupPro.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # preserve standard Andoid directories
-  # echo 'P Alarms/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P Android/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P DCIM/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P Download/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P Movies/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P Music/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P Notifications/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P Pictures/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P Podcasts/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P Ringtones/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P storage/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  rsync_setup_local_filter_file
 
 
   echo "Restoring TitaniumBackup data first ..."
