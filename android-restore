@@ -191,6 +191,7 @@ main() {
   for remote_storage in ${REMOTE_STORAGES[@]}
   do
     local storage_name="$(basename "${remote_storage}")"
+    echo "... restoring ${storage_name} ..."
     for dir in ${PRIO_DIRS}; do
       [[ ! -d "${BACKUP_DIR}/${storage_name}/${dir}" ]] && continue
       rsync_push "${BACKUP_DIR}/${storage_name}/${dir}/" "${remote_storage}/${dir}/"
@@ -202,6 +203,7 @@ main() {
   for remote_storage in ${REMOTE_STORAGES[@]}
   do
     local storage_name="$(basename "${remote_storage}")"
+    echo "... restoring ${storage_name} ..."
     rsync_push "${BACKUP_DIR}/${storage_name}/" "${remote_storage}/"
   done
 

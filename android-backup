@@ -164,8 +164,9 @@ main() {
   # start the backup
   for remote_storage in ${REMOTE_STORAGES[@]}
   do
-    echo "... backing up $(basename "${remote_storage}") ..."
-    rsync_pull "${remote_storage}/" "${BACKUP_DIR}/$(basename "${remote_storage}")/"
+    local storage_name="$(basename "${remote_storage}")"
+    echo "... backing up ${storage_name} ..."
+    rsync_pull "${remote_storage}/" "${BACKUP_DIR}/${storage_name}/"
   done
   
   # backup TitaniumBackup app separately
