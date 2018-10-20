@@ -3,7 +3,7 @@ Android-Backup
 
 Backup and restore your Android phone with ADB (and rsync)
 
-It will backup and restore all of your `/sdcard` directory.
+It will backup and restore all of your `/sdcard` directory and any other storage (e.g. an external SD Card) mounted within `/storage` except for `emulated` and `self`).
 Assuming you're using also something like [Titanium Backup](https://play.google.com/store/apps/details?id=com.keramidas.TitaniumBackup) you'll be able to backup and restore all your apps, settings and data.
 
 It uses [ADB](https://developer.android.com/tools/help/adb.html) for setup and [rsync](https://en.wikipedia.org/wiki/Rsync) to do the copying since the [Android File Transfer Tool](https://www.android.com/filetransfer/) for Mac has a laughable quality for Google’s standards.
@@ -47,7 +47,7 @@ android-backup [<backup-dir>]
 
 If you haven't given a backup directory it will ask you if it should generate one for you.
 
-If you have an older backup already you can use it to speed up the backup process. Rsync will automatically find out what files to download leaving out those that have not changed in the mean time.
+If you have an older backup already you can use it to speed up the backup process. Rsync will automatically find out what files to download leaving out those that have not changed in the meantime.
 
 ```shell
 cp -r previous-backup/ current-backup/
@@ -66,7 +66,15 @@ android-restore <backup-dir>
 
 ## Caveats
 
-* Currently restoring will not be able to be able to restore the correct timestamps of files. They'll be set to the current date and time when you're restoring them.
+### without root
+
+* Currently restoring will not be able to be able to restore the correct timestamps of files.
+  They'll be set to the date and time of when you're restoring them.
+  This will cause all of those files to be downloaded again for the first backup, because it will look as if those files have changed.
+
+* During data transfer you may see errors like `rsync: readlink_stat("/path/to/some/file" (in root)) failed: Permission denied (13)` followed later by `rsync: recv_generator: failed to stat "/path/to/some/file" (in root): Permission denied (13)`.
+  The files seem to still get restored fine (with the caveat above).
+  Otherwise please use the contact information below.
 
 ## Extract Rsync for Android Yourself
 
