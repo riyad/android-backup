@@ -8,19 +8,22 @@
 
 # for easy listing of directory contents starting with '.'
 GLOBIGNORE=.:..
-# on a running Android /sdcard is symlinked to /storage/emulated/[legacy|0]
-# but in TWRP it's directly mounted to /sdcard (so the other dirs aren't there)
-readonly ANDROID_STORAGE="/sdcard"
 readonly REMOTE_TEMP_DIR="/data/local/tmp"  # you can't chmod +x files in /sdcard
 readonly REMOTE_RSYNC_CONFIG="${REMOTE_TEMP_DIR}/rsync.conf"
 readonly REMOTE_RSYNC_PORT=1873  # > 1024 so we don't need to be root
 readonly LOCAL_RSYNC_PORT=6010
          REMOTE_RSYNC_BIN="rsync"
 readonly REMOTE_TEMP_RSYNC_BIN="${REMOTE_TEMP_DIR}/rsync"
+readonly USER_RSYNC_FILTER_FILE="$HOME/.android_backup/rsync_restore.filter"
 readonly LOCAL_RSYNC_FILTER_FILE=`mktemp -t "$(basename $0).XXXXXXXXXX"`
+# on a running Android /sdcard is symlinked to /storage/emulated/[legacy|0]
+# but in TWRP it's directly mounted to /sdcard (so the other dirs aren't there)
+readonly ANDROID_DEFAULT_STORAGE="/sdcard"
+         REMOTE_STORAGES=("${ANDROID_DEFAULT_STORAGE}")
 # these are relative to BACKUP_DIR
-readonly TB_DIR="TitaniumBackup"
 readonly TB_APKS="TitaniumBackup.apk TitaniumBackupPro.apk"
+# these are relative to BACKUP_DIR/STORAGE_NAME
+readonly TB_DIR="TitaniumBackup"
 readonly PRIO_DIRS="WhatsApp DCIM Pictures"
 readonly SKIP_DIRS="${TB_DIR} ${TB_APKS} ${PRIO_DIRS}"
 
@@ -38,7 +41,7 @@ adb_install() {
   adb install "$1"
 }
 adb_push() {
-  adb push -p "$1" "${ANDROID_STORAGE}/$1"
+  adb push -p "$1" "$2"
 }
 rsync_cleanup() {
   adb forward --remove tcp:${LOCAL_RSYNC_PORT}
@@ -87,6 +90,47 @@ rsync_setup() {
   adb forward tcp:${LOCAL_RSYNC_PORT} tcp:${REMOTE_RSYNC_PORT}
   sleep 2
 }
+rsync_setup_local_filter_file() {
+  cat <<-EOT >> "${LOCAL_RSYNC_FILTER_FILE}"
+# ignore known cache files
+H .DS_Store
+# don't sync custom files
+H /TitaniumBackup.apk
+H /TitaniumBackupPro.apk
+# preserve standard Andoid directories
+# P Alarms/
+# P Android/
+# P DCIM/
+# P Download/
+# P Movies/
+# P Music/
+# P Notifications/
+# P Pictures/
+# P Podcasts/
+# P Ringtones/
+# P storage/
+EOT
+
+  # include user-defined rules
+  if [[ -e "${USER_RSYNC_FILTER_FILE}" ]]; then
+    echo "merge ${USER_RSYNC_FILTER_FILE}" >> "${LOCAL_RSYNC_FILTER_FILE}"
+  fi
+}
+
+
+find_remote_storages() {
+  local android_storage_base="/storage"
+  local storage_candidates="$(adb shell ls "${android_storage_base}")"
+
+  for storage_name in ${storage_candidates}
+  do
+    # assume emulated/0 is covered by /sdcard and everything else isn't relevant
+    [[ "${storage_name}" = 'emulated' ]] && continue
+    [[ "${storage_name}" = 'self' ]] && continue
+
+    REMOTE_STORAGES+=("${android_storage_base}/${storage_name}")
+  done
+}
 
 
 main() {
@@ -107,32 +151,32 @@ main() {
 
   adb root
   adb wait-for-device
+
+
+  # will add entries to REMOTE_STORAGES
+  find_remote_storages
+
+  # TODO check if there are local directories that have no remote storage equivalent
+
+
   rsync_setup
-  # ignore known cache files
-  echo 'H .DS_Store' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # don't sync custom files
-  echo 'H /TitaniumBackup.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  echo 'H /TitaniumBackupPro.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # preserve standard Andoid directories
-  # echo 'P Alarms/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P Android/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P DCIM/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P Download/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P Movies/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P Music/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P Notifications/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P Pictures/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P Podcasts/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P Ringtones/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-  # echo 'P storage/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  rsync_setup_local_filter_file
 
 
   echo "Restoring TitaniumBackup data first ..."
-  if [ ! -d "${BACKUP_DIR}/${TB_DIR}" ]; then
+  local found_tb_dir=0
+  for remote_storage in ${REMOTE_STORAGES[@]}
+  do
+    local storage_name="$(basename "${remote_storage}")"
+    local possible_tb_dir="${storage_name}/${TB_DIR}"
+    [[ ! -d "${BACKUP_DIR}/${possible_tb_dir}" ]] && continue
+    found_tb_dir=1
+    rsync_push "${BACKUP_DIR}/${possible_tb_dir}/" "${remote_storage}/${TB_DIR}/"
+  done
+  if [ ${found_tb_dir} = 0 ]; then
     echo "Can't find TitaniumBackup data directory"
     exit 1
   fi
-  rsync_push "${BACKUP_DIR}/${TB_DIR}/" "${ANDROID_STORAGE}/${TB_DIR}/"
 
 
   # install TitaniumBackup so we can start restoring stuff on the device itself
@@ -148,14 +192,24 @@ main() {
 
 
   echo "Restoring some other things with priority ..."
-  for dir in ${PRIO_DIRS}; do
-    [[ ! -d "${BACKUP_DIR}/${dir}" ]] && continue
-    rsync_push "${BACKUP_DIR}/${dir}/" "${ANDROID_STORAGE}/${dir}/"
+  for remote_storage in ${REMOTE_STORAGES[@]}
+  do
+    local storage_name="$(basename "${remote_storage}")"
+    echo "... restoring ${storage_name} ..."
+    for dir in ${PRIO_DIRS}; do
+      [[ ! -d "${BACKUP_DIR}/${storage_name}/${dir}" ]] && continue
+      rsync_push "${BACKUP_DIR}/${storage_name}/${dir}/" "${remote_storage}/${dir}/"
+    done
   done
 
 
   echo "Restoring all the rest ..."
-  rsync_push "${BACKUP_DIR}/" "${ANDROID_STORAGE}/"
+  for remote_storage in ${REMOTE_STORAGES[@]}
+  do
+    local storage_name="$(basename "${remote_storage}")"
+    echo "... restoring ${storage_name} ..."
+    rsync_push "${BACKUP_DIR}/${storage_name}/" "${remote_storage}/"
+  done
 
 
   rsync_cleanup
