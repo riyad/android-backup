@@ -213,6 +213,10 @@ main() {
 
 
   rsync_cleanup
+
+  adb unroot
+  adb wait-for-device
+
   echo "... Done!"
 }
 
