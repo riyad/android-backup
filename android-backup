@@ -169,6 +169,7 @@ main() {
     echo "... backing up ${storage_name} ..."
     rsync_pull "${remote_storage}/" "${BACKUP_DIR}/${storage_name}/"
   done
+  echo "... Done!"
   
   # backup TitaniumBackup app separately
   echo "Backing up TitaniumBackup apps ..."
