@@ -85,71 +85,76 @@ rsync_setup() {
 }
 
 
-# make sure we get a path to backup stuff into
-if [[ -z "$1" ]]; then
-  backup_dir_name="./bkp `date '+%Y-%m-%dT%H-%M'`"
-  echo "You haven't specified a backup directory."
-  read -p "Use '${backup_dir_name}'? [y/n] " yn
-  case $yn in
-    [Yy]* ) ;;  # just get through
-    [Nn]* ) exit;;
-    * ) exit 1;;
-  esac
-  readonly BACKUP_DIR="${backup_dir_name}"
-else
-  readonly BACKUP_DIR="$1"
-fi
+main() {
+  # make sure we get a path to backup stuff into
+  if [[ -z "$1" ]]; then
+    backup_dir_name="./bkp `date '+%Y-%m-%dT%H-%M'`"
+    echo "You haven't specified a backup directory."
+    read -p "Use '${backup_dir_name}'? [y/n] " yn
+    case $yn in
+      [Yy]* ) ;;  # just get through
+      [Nn]* ) exit;;
+      * ) exit 1;;
+    esac
+    readonly BACKUP_DIR="${backup_dir_name}"
+  else
+    readonly BACKUP_DIR="$1"
+  fi
 
 
-# make sure we don't overwrite anything by accident
-if [[ -d "${BACKUP_DIR}" ]]; then
-  echo "WARNING: '${BACKUP_DIR}' exists already!"
-  read -p "Are you sure you want to overwrite files in there? [Yes/No] " yn
-  case $yn in
-    'Yes'* ) ;;  # just get through
-    'No'* ) exit;;
-    * ) exit 1;;
-  esac
-fi
+  # make sure we don't overwrite anything by accident
+  if [[ -d "${BACKUP_DIR}" ]]; then
+    echo "WARNING: '${BACKUP_DIR}' exists already!"
+    read -p "Are you sure you want to overwrite files in there? [Yes/No] " yn
+    case $yn in
+      'Yes'* ) ;;  # just get through
+      'No'* ) exit;;
+      * ) exit 1;;
+    esac
+  fi
 
 
-mkdir -p "${BACKUP_DIR}"
+  mkdir -p "${BACKUP_DIR}"
 
 
-rsync_setup
-echo "Backing up user data ..."
-# ignore known cache files
-echo 'H .DS_Store' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# don't let rsync delete these (see below)
-echo 'P /TitaniumBackup.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'P /TitaniumBackupPro.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# don't sync certain files and directories
-echo 'H .cache/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H .thumbs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H .thumbnails/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /Android/data/com.android.providers.media/albumthumbs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /Android/data/com.google.android.apps.maps/testdata/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /Android/data/org.videolan.vlc/files/thumbs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /Android/data/*/cache' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /Applidium Image Cache/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /CameraZOOM/.packs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /CameraZOOM/.temp/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /osmand/*.obf' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /osmand/fonts/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /osmand/tiles/**/*.tile' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /osmand/travel/*.sqlite' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /osmand/voice/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /quran_android/audio/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /WhatsApp/Media/.Statuses/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# don't sync large directories that can easily be restored
-echo 'H /Music/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /Movies/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /Podcasts/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# start the backup
-rsync_pull "${ANDROID_STORAGE}/" "${BACKUP_DIR}/"
-# backup TitaniumBackup app separately
-echo "Backing up TitaniumBackup apps ..."
-adb_pull_app com.keramidas.TitaniumBackup "${BACKUP_DIR}/TitaniumBackup.apk"
-adb_pull_app com.keramidas.TitaniumBackupPro "${BACKUP_DIR}/TitaniumBackupPro.apk"
-rsync_cleanup
-echo "... Done!"
+  rsync_setup
+  echo "Backing up user data ..."
+  # ignore known cache files
+  echo 'H .DS_Store' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # don't let rsync delete these (see below)
+  echo 'P /TitaniumBackup.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'P /TitaniumBackupPro.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # don't sync certain files and directories
+  echo 'H .cache/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H .thumbs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H .thumbnails/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /Android/data/com.android.providers.media/albumthumbs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /Android/data/com.google.android.apps.maps/testdata/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /Android/data/org.videolan.vlc/files/thumbs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /Android/data/*/cache' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /Applidium Image Cache/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /CameraZOOM/.packs/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /CameraZOOM/.temp/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /osmand/*.obf' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /osmand/fonts/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /osmand/tiles/**/*.tile' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /osmand/travel/*.sqlite' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /osmand/voice/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /quran_android/audio/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /WhatsApp/Media/.Statuses/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # don't sync large directories that can easily be restored
+  echo 'H /Music/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /Movies/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /Podcasts/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # start the backup
+  rsync_pull "${ANDROID_STORAGE}/" "${BACKUP_DIR}/"
+  # backup TitaniumBackup app separately
+  echo "Backing up TitaniumBackup apps ..."
+  adb_pull_app com.keramidas.TitaniumBackup "${BACKUP_DIR}/TitaniumBackup.apk"
+  adb_pull_app com.keramidas.TitaniumBackupPro "${BACKUP_DIR}/TitaniumBackupPro.apk"
+  rsync_cleanup
+  echo "... Done!"
+}
+
+
+main $@

@@ -89,73 +89,78 @@ rsync_setup() {
 }
 
 
-# make sure we get a path to restore stuff from
-if [[ -z "$1" ]]; then
-  echo "Please specify the directory your backups are in!"
-  exit 1
-else
-  readonly BACKUP_DIR="$1"
-fi
-
-
-if [[ ! -d "${BACKUP_DIR}" ]]; then
-  echo "'${BACKUP_DIR}' is not a directory."
-  exit 1
-fi
-
-
-adb root
-adb wait-for-device
-rsync_setup
-# ignore known cache files
-echo 'H .DS_Store' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# don't sync custom files
-echo 'H /TitaniumBackup.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
-echo 'H /TitaniumBackupPro.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# preserve standard Andoid directories
-# echo 'P Alarms/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# echo 'P Android/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# echo 'P DCIM/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# echo 'P Download/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# echo 'P Movies/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# echo 'P Music/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# echo 'P Notifications/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# echo 'P Pictures/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# echo 'P Podcasts/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# echo 'P Ringtones/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-# echo 'P storage/' >> "${LOCAL_RSYNC_FILTER_FILE}"
-
-
-echo "Restoring TitaniumBackup data first ..."
-if [ ! -d "${BACKUP_DIR}/${TB_DIR}" ]; then
-  echo "Can't find TitaniumBackup data directory"
-  exit 1
-fi
-rsync_push "${BACKUP_DIR}/${TB_DIR}/" "${ANDROID_STORAGE}/${TB_DIR}/"
-
-
-# install TitaniumBackup so we can start restoring stuff on the device itself
-echo "Restoring TitaniumBackup apps ..."
-for apk in ${TB_APKS}; do
-  if [[ -f "${BACKUP_DIR}/${apk}" ]]; then
-    adb_install "${BACKUP_DIR}/${apk}"
+main() {
+  # make sure we get a path to restore stuff from
+  if [[ -z "$1" ]]; then
+    echo "Please specify the directory your backups are in!"
+    exit 1
   else
-    echo "Can't find TitaniumBackup app ${apk}."
+    readonly BACKUP_DIR="$1"
+  fi
+
+
+  if [[ ! -d "${BACKUP_DIR}" ]]; then
+    echo "'${BACKUP_DIR}' is not a directory."
     exit 1
   fi
-done
 
 
-echo "Restoring some other things with priority ..."
-for dir in ${PRIO_DIRS}; do
-  [[ ! -d "${BACKUP_DIR}/${dir}" ]] && continue
-  rsync_push "${BACKUP_DIR}/${dir}/" "${ANDROID_STORAGE}/${dir}/"
-done
+  adb root
+  adb wait-for-device
+  rsync_setup
+  # ignore known cache files
+  echo 'H .DS_Store' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # don't sync custom files
+  echo 'H /TitaniumBackup.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  echo 'H /TitaniumBackupPro.apk' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # preserve standard Andoid directories
+  # echo 'P Alarms/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # echo 'P Android/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # echo 'P DCIM/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # echo 'P Download/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # echo 'P Movies/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # echo 'P Music/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # echo 'P Notifications/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # echo 'P Pictures/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # echo 'P Podcasts/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # echo 'P Ringtones/' >> "${LOCAL_RSYNC_FILTER_FILE}"
+  # echo 'P storage/' >> "${LOCAL_RSYNC_FILTER_FILE}"
 
 
-echo "Restoring all the rest ..."
-rsync_push "${BACKUP_DIR}/" "${ANDROID_STORAGE}/"
+  echo "Restoring TitaniumBackup data first ..."
+  if [ ! -d "${BACKUP_DIR}/${TB_DIR}" ]; then
+    echo "Can't find TitaniumBackup data directory"
+    exit 1
+  fi
+  rsync_push "${BACKUP_DIR}/${TB_DIR}/" "${ANDROID_STORAGE}/${TB_DIR}/"
 
 
-rsync_cleanup
-echo "... Done!"
+  # install TitaniumBackup so we can start restoring stuff on the device itself
+  echo "Restoring TitaniumBackup apps ..."
+  for apk in ${TB_APKS}; do
+    if [[ -f "${BACKUP_DIR}/${apk}" ]]; then
+      adb_install "${BACKUP_DIR}/${apk}"
+    else
+      echo "Can't find TitaniumBackup app ${apk}."
+      exit 1
+    fi
+  done
+
+
+  echo "Restoring some other things with priority ..."
+  for dir in ${PRIO_DIRS}; do
+    [[ ! -d "${BACKUP_DIR}/${dir}" ]] && continue
+    rsync_push "${BACKUP_DIR}/${dir}/" "${ANDROID_STORAGE}/${dir}/"
+  done
+
+
+  echo "Restoring all the rest ..."
+  rsync_push "${BACKUP_DIR}/" "${ANDROID_STORAGE}/"
+
+
+  rsync_cleanup
+  echo "... Done!"
+}
+
+
+main $@
