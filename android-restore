@@ -128,7 +128,25 @@ find_remote_storages() {
 }
 
 
-main() {
+parse_command_line_args() {
+  while [[ $# -gt 1 ]]
+  do
+    case "$1" in
+      --debug)
+        readonly OPT_DEBUG=1
+        ;;
+      -r|--use-root)
+        readonly OPT_ROOT=1
+        ;;
+      *)
+        echo "Error: unknown argument \"$1\""
+        usage
+        exit 1
+      ;;
+    esac
+    shift
+  done
+
   # make sure we get a path to restore stuff from
   if [[ -z "$1" ]]; then
     echo "Please specify the directory your backups are in!"
@@ -136,27 +154,45 @@ main() {
   else
     readonly BACKUP_DIR="$1"
   fi
+}
 
+usage() {
+  echo "Usage: $0 [OPTIONS] <BACKUP_DIR>"
+  echo "       Backup data from storages on the device to <BACKUP_DIR>."
+  echo "       NOTE: this requires adb and rsync."
+  echo ""
+  echo "OPTIONS"
+  echo "       --debug  Enable debug mode"
+  echo " -r,--use-root  Use adb with root permissions"
+}
+
+
+main() {
+  parse_command_line_args $@
+
+  if [[ ${OPT_DEBUG} ]]; then
+    echo "OPT_DEBUG=${OPT_DEBUG}"
+    echo "OPT_ROOT=${OPT_ROOT}"
+    echo "BACKUP_DIR=${BACKUP_DIR}"
+  fi
 
   if [[ ! -d "${BACKUP_DIR}" ]]; then
     echo "'${BACKUP_DIR}' is not a directory."
     exit 1
   fi
 
-
-  adb root
+  if [[ ${OPT_ROOT} ]]; then
+    adb root
+  fi
   adb wait-for-device
-
 
   # will add entries to REMOTE_STORAGES
   find_remote_storages
 
   # TODO check if there are local directories that have no remote storage equivalent
 
-
   rsync_setup
   rsync_setup_local_filter_file
-
 
   echo "Restoring TitaniumBackup data first ..."
   local found_tb_dir=0
@@ -174,7 +210,6 @@ main() {
   fi
   echo "... Done!"
 
-
   # install TitaniumBackup so we can start restoring stuff on the device itself
   echo "Restoring TitaniumBackup apps ..."
   for apk in ${TB_APKS}; do
@@ -185,7 +220,6 @@ main() {
       exit 1
     fi
   done
-
 
   echo "Restoring some other things with priority ..."
   for remote_storage in ${REMOTE_STORAGES[@]}
@@ -199,7 +233,6 @@ main() {
   done
   echo "... Done!"
 
-
   echo "Restoring all the rest ..."
   for remote_storage in ${REMOTE_STORAGES[@]}
   do
@@ -208,11 +241,11 @@ main() {
     rsync_push "${BACKUP_DIR}/${storage_name}/" "${remote_storage}/"
   done
 
-
   rsync_cleanup
 
-  adb unroot
-  adb wait-for-device
+  if [[ ${OPT_ROOT} ]]; then
+    adb unroot
+  fi
 
   echo "... Done!"
 }

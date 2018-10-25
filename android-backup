@@ -124,20 +124,52 @@ find_remote_storages() {
 }
 
 
-main() {
+parse_command_line_args() {
+  while [[ $# -gt 1 ]]
+  do
+    case "$1" in
+      --debug)
+        readonly OPT_DEBUG=1
+        ;;
+      -r|--use-root)
+        readonly OPT_ROOT=1
+        ;;
+      *)
+        echo "Error: unknown argument \"$1\""
+        usage
+        exit 1
+      ;;
+    esac
+    shift
+  done
+
   # make sure we get a path to backup stuff into
   if [[ -z "$1" ]]; then
-    backup_dir_name="./bkp `date '+%Y-%m-%dT%H-%M'`"
-    echo "You haven't specified a backup directory."
-    read -p "Use '${backup_dir_name}'? [y/n] " yn
-    case $yn in
-      [Yy]* ) ;;  # just get through
-      [Nn]* ) exit;;
-      * ) exit 1;;
-    esac
-    readonly BACKUP_DIR="${backup_dir_name}"
+    echo "Please specify the directory your backups should go into!"
+    exit 1
   else
     readonly BACKUP_DIR="$1"
+  fi
+}
+
+usage() {
+  echo "Usage: $0 [OPTIONS] <BACKUP_DIR>"
+  echo "       Backup data from storages on the device to <BACKUP_DIR>."
+  echo "       NOTE: this requires adb and rsync."
+  echo ""
+  echo "OPTIONS"
+  echo "       --debug  Enable debug mode"
+  echo " -r,--use-root  Use adb with root permissions"
+}
+
+
+main() {
+  parse_command_line_args $@
+
+  if [[ ${OPT_DEBUG} ]]; then
+    echo "OPT_DEBUG=${OPT_DEBUG}"
+    echo "OPT_ROOT=${OPT_ROOT}"
+    echo "BACKUP_DIR=${BACKUP_DIR}"
   fi
 
   # make sure we don't overwrite anything by accident
@@ -153,10 +185,13 @@ main() {
 
   mkdir -p "${BACKUP_DIR}"
 
+  if [[ ${OPT_ROOT} ]]; then
+    adb root
+  fi
+  adb wait-for-device
 
   # will add entries to REMOTE_STORAGES
   find_remote_storages
-
 
   rsync_setup
   rsync_setup_local_filter_file
@@ -177,6 +212,11 @@ main() {
   adb_pull_app com.keramidas.TitaniumBackupPro "${BACKUP_DIR}/TitaniumBackupPro.apk"
   
   rsync_cleanup
+  
+  if [[ ${OPT_ROOT} ]]; then
+    adb unroot
+  fi
+
   echo "... Done!"
 }
 
