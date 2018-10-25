@@ -31,12 +31,6 @@ readonly SKIP_DIRS="${TB_DIR} ${TB_APKS} ${PRIO_DIRS}"
 exec 2>&1 | logger
 
 alias adb="adb -d"
-# thanks to http://stackoverflow.com/questions/8063228/how-do-i-check-if-a-variable-exists-in-a-list-in-bash
-contains() {
-  local list="$1"
-  local item="$2"
-  [[ ${list} =~ (^|[[:space:]])${item}($|[[:space:]]) ]]
-}
 adb_install() {
   adb install "$1"
 }
