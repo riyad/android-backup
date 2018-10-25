@@ -44,6 +44,7 @@ adb_push() {
   adb push -p "$1" "$2"
 }
 rsync_cleanup() {
+  adb shell killall "${REMOTE_RSYNC_BIN}"
   adb forward --remove tcp:${LOCAL_RSYNC_PORT}
   adb shell rm -f "${REMOTE_RSYNC_CONFIG}"
   if [[ -f "${REMOTE_TEMP_RSYNC_BIN}" ]]; then
@@ -177,6 +178,7 @@ main() {
     echo "Can't find TitaniumBackup data directory"
     exit 1
   fi
+  echo "... Done!"
 
 
   # install TitaniumBackup so we can start restoring stuff on the device itself
@@ -201,6 +203,7 @@ main() {
       rsync_push "${BACKUP_DIR}/${storage_name}/${dir}/" "${remote_storage}/${dir}/"
     done
   done
+  echo "... Done!"
 
 
   echo "Restoring all the rest ..."

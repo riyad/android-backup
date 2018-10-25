@@ -41,6 +41,7 @@ adb_rm_dir() {
   adb shell "[[ -d \"$1\" ]] && rm -r \"$1\""
 }
 rsync_cleanup() {
+  adb shell killall "${REMOTE_RSYNC_BIN}"
   adb forward --remove tcp:${LOCAL_RSYNC_PORT}
   adb shell rm -f "${REMOTE_RSYNC_CONFIG}"
   if [[ -f "${REMOTE_TEMP_RSYNC_BIN}" ]]; then
@@ -168,6 +169,7 @@ main() {
     echo "... backing up ${storage_name} ..."
     rsync_pull "${remote_storage}/" "${BACKUP_DIR}/${storage_name}/"
   done
+  echo "... Done!"
   
   # backup TitaniumBackup app separately
   echo "Backing up TitaniumBackup apps ..."
