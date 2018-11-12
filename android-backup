@@ -164,7 +164,7 @@ parse_command_line_args() {
     echo "Please specify the directory your backups should go into!"
     exit 1
   else
-    readonly BACKUP_DIR="$1"
+    readonly OPT_BACKUP_DIR="$1"
   fi
 }
 
@@ -182,13 +182,13 @@ usage() {
 main() {
   parse_command_line_args $@
 
+  echo_debug "OPT_BACKUP_DIR=${OPT_BACKUP_DIR}"
   echo_debug "OPT_DEBUG=${OPT_DEBUG}"
   echo_debug "OPT_ROOT=${OPT_ROOT}"
-  echo_debug "BACKUP_DIR=${BACKUP_DIR}"
 
   # make sure we don't overwrite anything by accident
-  if [[ -d "${BACKUP_DIR}" ]]; then
-    echo_warn "'${BACKUP_DIR}' exists already!"
+  if [[ -d "${OPT_BACKUP_DIR}" ]]; then
+    echo_warn "'${OPT_BACKUP_DIR}' exists already!"
     read -p "Are you sure you want to overwrite files in there? [Yes/No] " yn
     case $yn in
       'Yes'* ) ;;  # just get through
@@ -197,7 +197,20 @@ main() {
     esac
   fi
 
-  mkdir -p "${BACKUP_DIR}"
+  echo_debug "Creating ${OPT_BACKUP_DIR}."
+  mkdir -p "${OPT_BACKUP_DIR}"
+
+  echo_debug "REMOTE_TEMP_DIR=${REMOTE_TEMP_DIR}"
+  echo_debug "REMOTE_RSYNC_CONFIG=${REMOTE_RSYNC_CONFIG}"
+  echo_debug "REMOTE_RSYNC_PORT=${REMOTE_RSYNC_PORT}"
+  echo_debug "LOCAL_RSYNC_PORT=${LOCAL_RSYNC_PORT}"
+  echo_debug "REMOTE_RSYNC_BIN=${REMOTE_RSYNC_BIN}"
+  echo_debug "REMOTE_RSYNC_MODULE=${REMOTE_RSYNC_MODULE}"
+  echo_debug "REMOTE_TEMP_RSYNC_BIN=${REMOTE_TEMP_RSYNC_BIN}"
+  echo_debug "USER_RSYNC_FILTER_FILE=${USER_RSYNC_FILTER_FILE}"
+  echo_debug "LOCAL_RSYNC_FILTER_FILE=${LOCAL_RSYNC_FILTER_FILE}"
+  echo_debug "ANDROID_DEFAULT_STORAGE=${ANDROID_DEFAULT_STORAGE}"
+  echo_debug "REMOTE_STORAGES=${REMOTE_STORAGES}"
 
   if [[ ${OPT_ROOT} ]]; then
     adb root
@@ -216,14 +229,14 @@ main() {
   do
     local storage_name="$(basename "${remote_storage}")"
     echo_info "... backing up ${storage_name} ..."
-    rsync_pull "${remote_storage}/" "${BACKUP_DIR}/${storage_name}/"
+    rsync_pull "${remote_storage}/" "${OPT_BACKUP_DIR}/${storage_name}/"
   done
   echo_info "... Done!"
   
   # backup TitaniumBackup app separately
   echo_info "Backing up TitaniumBackup apps ..."
-  adb_pull_app com.keramidas.TitaniumBackup "${BACKUP_DIR}/TitaniumBackup.apk"
-  adb_pull_app com.keramidas.TitaniumBackupPro "${BACKUP_DIR}/TitaniumBackupPro.apk"
+  adb_pull_app com.keramidas.TitaniumBackup "${OPT_BACKUP_DIR}/TitaniumBackup.apk"
+  adb_pull_app com.keramidas.TitaniumBackupPro "${OPT_BACKUP_DIR}/TitaniumBackupPro.apk"
   echo_info "... Done!"
   
   rsync_cleanup
