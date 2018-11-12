@@ -6,6 +6,10 @@
 # It'll also back up your current TitaniumBackup apps for faster restoration.
 
 
+# log everything using syslog
+exec 2>&1 | logger
+
+
 readonly REMOTE_TEMP_DIR="/data/local/tmp"  # you can't chmod +x files in /sdcard
 readonly REMOTE_RSYNC_CONFIG="${REMOTE_TEMP_DIR}/rsync.conf"
 readonly REMOTE_RSYNC_PORT=1873  # > 1024 so we don't need to be root
@@ -19,8 +23,20 @@ readonly LOCAL_RSYNC_FILTER_FILE=`mktemp -t "$(basename $0).XXXXXXXXXX"`
 readonly ANDROID_DEFAULT_STORAGE="/sdcard"
          REMOTE_STORAGES=("${ANDROID_DEFAULT_STORAGE}")
 
-# log everything using syslog
-exec 2>&1 | logger
+
+echo_debug() {
+  [[ ${OPT_DEBUG} ]] && echo "Debug: $1"
+}
+echo_info() {
+  echo "$1"
+}
+echo_warn() {
+  echo "Warning: $1"
+}
+echo_error() {
+  echo "Error: $1"
+}
+
 
 alias adb="adb -d"
 adb_package_path() {
@@ -28,7 +44,7 @@ adb_package_path() {
 }
 adb_pull_app() {
   if [[ -z "$(adb_package_path \"$1\")" ]]; then
-    echo "Can't find app $1"
+    echo_error "Can't find app $1"
     return 1
   else
     rsync_pull "$(adb_package_path \"$1\")" "$2"
@@ -45,7 +61,7 @@ rsync_cleanup() {
   adb forward --remove tcp:${LOCAL_RSYNC_PORT}
   adb shell rm -f "${REMOTE_RSYNC_CONFIG}"
   if [[ -f "${REMOTE_TEMP_RSYNC_BIN}" ]]; then
-    echo "Cleaning up temporary rsync"
+    echo_debug "Cleaning up temporary rsync"
     adb shell rm -f "${REMOTE_TEMP_RSYNC_BIN}"
   fi
   [[ -e "${LOCAL_RSYNC_FILTER_FILE}" ]] && rm "${LOCAL_RSYNC_FILTER_FILE}"
@@ -58,7 +74,7 @@ rsync_pull() {
 }
 rsync_setup() {
   if [[ -z "$(adb shell which \"${REMOTE_RSYNC_BIN}\")" ]]; then
-    echo "Device doesn't have rsync."
+    echo_info "Device doesn't have rsync."
     # try different locations for backup rsync
     local SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
     for rsync_src_dir in "${SCRIPT_DIR}" "/usr/local/lib/android-backup"; do
@@ -67,12 +83,12 @@ rsync_setup() {
     done
     # have we found a backup rsync?
     if [[ -e "${RSYNC_SRC}" ]]; then
-      echo "Providing temporary rsync from ${RSYNC_SRC} ..."
+      echo_info "Providing temporary rsync from ${RSYNC_SRC} ..."
       adb_push "${RSYNC_SRC}" "${REMOTE_TEMP_RSYNC_BIN}"
       adb shell chmod 755 "${REMOTE_TEMP_RSYNC_BIN}"
       REMOTE_RSYNC_BIN="${REMOTE_TEMP_RSYNC_BIN}"
     else
-      echo "Can't provide temprorary rsync."
+      echo_error "Can't provide temporary rsync."
       exit 1
     fi
   fi
@@ -166,15 +182,13 @@ usage() {
 main() {
   parse_command_line_args $@
 
-  if [[ ${OPT_DEBUG} ]]; then
-    echo "OPT_DEBUG=${OPT_DEBUG}"
-    echo "OPT_ROOT=${OPT_ROOT}"
-    echo "BACKUP_DIR=${BACKUP_DIR}"
-  fi
+  echo_debug "OPT_DEBUG=${OPT_DEBUG}"
+  echo_debug "OPT_ROOT=${OPT_ROOT}"
+  echo_debug "BACKUP_DIR=${BACKUP_DIR}"
 
   # make sure we don't overwrite anything by accident
   if [[ -d "${BACKUP_DIR}" ]]; then
-    echo "WARNING: '${BACKUP_DIR}' exists already!"
+    echo_warn "'${BACKUP_DIR}' exists already!"
     read -p "Are you sure you want to overwrite files in there? [Yes/No] " yn
     case $yn in
       'Yes'* ) ;;  # just get through
@@ -196,28 +210,27 @@ main() {
   rsync_setup
   rsync_setup_local_filter_file
 
-  echo "Backing up user data ..."
+  echo_info "Backing up user data ..."
   # start the backup
   for remote_storage in ${REMOTE_STORAGES[@]}
   do
     local storage_name="$(basename "${remote_storage}")"
-    echo "... backing up ${storage_name} ..."
+    echo_info "... backing up ${storage_name} ..."
     rsync_pull "${remote_storage}/" "${BACKUP_DIR}/${storage_name}/"
   done
-  echo "... Done!"
+  echo_info "... Done!"
   
   # backup TitaniumBackup app separately
-  echo "Backing up TitaniumBackup apps ..."
+  echo_info "Backing up TitaniumBackup apps ..."
   adb_pull_app com.keramidas.TitaniumBackup "${BACKUP_DIR}/TitaniumBackup.apk"
   adb_pull_app com.keramidas.TitaniumBackupPro "${BACKUP_DIR}/TitaniumBackupPro.apk"
+  echo_info "... Done!"
   
   rsync_cleanup
   
   if [[ ${OPT_ROOT} ]]; then
     adb unroot
   fi
-
-  echo "... Done!"
 }
 
 
