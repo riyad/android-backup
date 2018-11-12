@@ -15,6 +15,7 @@ readonly REMOTE_RSYNC_CONFIG="${REMOTE_TEMP_DIR}/rsync.conf"
 readonly REMOTE_RSYNC_PORT=1873  # > 1024 so we don't need to be root
 readonly LOCAL_RSYNC_PORT=6010
          REMOTE_RSYNC_BIN="rsync"
+readonly REMOTE_RSYNC_MODULE="android_backup"
 readonly REMOTE_TEMP_RSYNC_BIN="${REMOTE_TEMP_DIR}/rsync"
 readonly USER_RSYNC_FILTER_FILE="$HOME/.android_backup/rsync_backup.filter"
 readonly LOCAL_RSYNC_FILTER_FILE=`mktemp -t "$(basename $0).XXXXXXXXXX"`
@@ -47,7 +48,7 @@ adb_pull_app() {
     echo_error "Can't find app $1"
     return 1
   else
-    rsync_pull "$(adb_package_path \"$1\")" "$2"
+    rsync_pull_module "$(adb_package_path \"$1\")" "$2"
   fi
 }
 adb_push() {
@@ -66,10 +67,10 @@ rsync_cleanup() {
   fi
   [[ -e "${LOCAL_RSYNC_FILTER_FILE}" ]] && rm "${LOCAL_RSYNC_FILTER_FILE}"
 }
-rsync_pull() {
+rsync_pull_module() {
   rsync --partial --progress --archive --human-readable --delete \
     --filter=". ${LOCAL_RSYNC_FILTER_FILE}" --prune-empty-dirs \
-    "rsync://localhost:${LOCAL_RSYNC_PORT}/root/$1" "$2"
+    "rsync://localhost:${LOCAL_RSYNC_PORT}/${REMOTE_RSYNC_MODULE}/$1" "$2"
   : rc $?
 }
 rsync_setup() {
@@ -95,7 +96,7 @@ rsync_setup() {
   # setup rsync daemon on the device
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
   # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
-  adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[root]\npath = /\nuse chroot = false\nread only = true\"" \> "${REMOTE_RSYNC_CONFIG}"
+  adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[${REMOTE_RSYNC_MODULE}]\npath = /\nuse chroot = false\nread only = true\"" \> "${REMOTE_RSYNC_CONFIG}"
   touch "${LOCAL_RSYNC_FILTER_FILE}"
   adb shell "${REMOTE_RSYNC_BIN} --daemon --no-detach --config=\"${REMOTE_RSYNC_CONFIG}\" &"  # for debugging --log-file=/proc/self/fd/2
   # forward a local port to the rsync daemon on the device
@@ -229,7 +230,7 @@ main() {
   do
     local storage_name="$(basename "${remote_storage}")"
     echo_info "... backing up ${storage_name} ..."
-    rsync_pull "${remote_storage}/" "${OPT_BACKUP_DIR}/${storage_name}/"
+    rsync_pull_module "${remote_storage}/" "${OPT_BACKUP_DIR}/${storage_name}/"
   done
   echo_info "... Done!"
   
