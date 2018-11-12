@@ -57,15 +57,21 @@ adb_push() {
 adb_rm_dir() {
   adb shell "[[ -d \"$1\" ]] && rm -r \"$1\""
 }
-rsync_cleanup() {
+rsync_cleanup_local() {
+  echo_debug "Removing local rsync filter file ..."
+  [[ -e "${LOCAL_RSYNC_FILTER_FILE}" ]] && rm "${LOCAL_RSYNC_FILTER_FILE}"
+}
+rsync_cleanup_remote() {
+  echo_debug "Killing rsync daemon ..."
   adb shell killall "${REMOTE_RSYNC_BIN}"
+  echo_debug "Removing port-forwarding ..."
   adb forward --remove tcp:${LOCAL_RSYNC_PORT}
+  echo_debug "Removing remote rsync daemon config ..."
   adb shell rm -f "${REMOTE_RSYNC_CONFIG}"
   if [[ -f "${REMOTE_TEMP_RSYNC_BIN}" ]]; then
-    echo_debug "Cleaning up temporary rsync"
+    echo_debug "Removing provided remote rsync ..."
     adb shell rm -f "${REMOTE_TEMP_RSYNC_BIN}"
   fi
-  [[ -e "${LOCAL_RSYNC_FILTER_FILE}" ]] && rm "${LOCAL_RSYNC_FILTER_FILE}"
 }
 rsync_pull_module() {
   rsync --partial --progress --archive --human-readable --delete \
@@ -73,37 +79,11 @@ rsync_pull_module() {
     "rsync://localhost:${LOCAL_RSYNC_PORT}/${REMOTE_RSYNC_MODULE}/$1" "$2"
   : rc $?
 }
-rsync_setup() {
-  if [[ -z "$(adb shell which \"${REMOTE_RSYNC_BIN}\")" ]]; then
-    echo_info "Device doesn't have rsync."
-    # try different locations for backup rsync
-    local SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    for rsync_src_dir in "${SCRIPT_DIR}" "/usr/local/lib/android-backup"; do
-      local RSYNC_SRC="${rsync_src_dir}/rsync.bkp"
-      [[ -e "${RSYNC_SRC}" ]] && break
-    done
-    # have we found a backup rsync?
-    if [[ -e "${RSYNC_SRC}" ]]; then
-      echo_info "Providing temporary rsync from ${RSYNC_SRC} ..."
-      adb_push "${RSYNC_SRC}" "${REMOTE_TEMP_RSYNC_BIN}"
-      adb shell chmod 755 "${REMOTE_TEMP_RSYNC_BIN}"
-      REMOTE_RSYNC_BIN="${REMOTE_TEMP_RSYNC_BIN}"
-    else
-      echo_error "Can't provide temporary rsync."
-      exit 1
-    fi
-  fi
-  # setup rsync daemon on the device
-  # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
-  # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
-  adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[${REMOTE_RSYNC_MODULE}]\npath = /\nuse chroot = false\nread only = true\"" \> "${REMOTE_RSYNC_CONFIG}"
-  touch "${LOCAL_RSYNC_FILTER_FILE}"
-  adb shell "${REMOTE_RSYNC_BIN} --daemon --no-detach --config=\"${REMOTE_RSYNC_CONFIG}\" &"  # for debugging --log-file=/proc/self/fd/2
-  # forward a local port to the rsync daemon on the device
-  adb forward tcp:${LOCAL_RSYNC_PORT} tcp:${REMOTE_RSYNC_PORT}
-  sleep 2
+rsync_setup_local() {
+  rsync_setup_local_filter_file
 }
 rsync_setup_local_filter_file() {
+  echo_debug "Creating local rsync filter file ..."
   cat <<-EOT >> "${LOCAL_RSYNC_FILTER_FILE}"
 # don't let rsync delete these
 P /TitaniumBackup.apk
@@ -123,6 +103,45 @@ EOT
   if [[ -e "${USER_RSYNC_FILTER_FILE}" ]]; then
     echo "merge ${USER_RSYNC_FILTER_FILE}" >> "${LOCAL_RSYNC_FILTER_FILE}"
   fi
+
+  if [[ ${OPT_DEBUG} ]]; then
+    echo_debug "Contents of local rsync filter file:"
+    cat "${LOCAL_RSYNC_FILTER_FILE}" && echo ""
+  fi
+}
+rsync_setup_remote() {
+  if [[ -z "$(adb shell which \"${REMOTE_RSYNC_BIN}\")" ]]; then
+    echo_info "Device doesn't have rsync."
+    # try different locations for backup rsync
+    local script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    for rsync_src_dir in "${script_dir}" "/usr/local/lib/android-backup"; do
+      local RSYNC_SRC="${rsync_src_dir}/rsync.bkp"
+      [[ -e "${RSYNC_SRC}" ]] && break
+    done
+    # have we found a backup rsync?
+    if [[ -e "${RSYNC_SRC}" ]]; then
+      echo_info "Providing temporary rsync from ${RSYNC_SRC} ..."
+      adb_push "${RSYNC_SRC}" "${REMOTE_TEMP_RSYNC_BIN}"
+      adb shell chmod 755 "${REMOTE_TEMP_RSYNC_BIN}"
+      REMOTE_RSYNC_BIN="${REMOTE_TEMP_RSYNC_BIN}"
+    else
+      echo_error "Can't provide temporary rsync."
+      exit 1
+    fi
+  fi
+  # setup rsync daemon on the device
+  # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
+  # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
+  echo_debug "Writing remote rsync daemon config file ..."
+  adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[${REMOTE_RSYNC_MODULE}]\npath = /\nuse chroot = false\nread only = true\nlist = false\"" \> "${REMOTE_RSYNC_CONFIG}"
+
+  echo_debug "Setting up port-forwarding ..."
+  # forward a local port to the rsync daemon on the device
+  adb forward tcp:${LOCAL_RSYNC_PORT} tcp:${REMOTE_RSYNC_PORT}
+  sleep 2
+
+  echo_debug "Starting remote rsync daemon ..."
+  adb shell "${REMOTE_RSYNC_BIN} --daemon --no-detach --config=\"${REMOTE_RSYNC_CONFIG}\" &"  # for debugging --log-file=/proc/self/fd/2
 }
 
 
@@ -221,8 +240,8 @@ main() {
   # will add entries to REMOTE_STORAGES
   find_remote_storages
 
-  rsync_setup
-  rsync_setup_local_filter_file
+  rsync_setup_local
+  rsync_setup_remote
 
   echo_info "Backing up user data ..."
   # start the backup
@@ -240,7 +259,8 @@ main() {
   adb_pull_app com.keramidas.TitaniumBackupPro "${OPT_BACKUP_DIR}/TitaniumBackupPro.apk"
   echo_info "... Done!"
   
-  rsync_cleanup
+  rsync_cleanup_remote
+  rsync_cleanup_local
   
   if [[ ${OPT_ROOT} ]]; then
     adb unroot
@@ -248,4 +268,4 @@ main() {
 }
 
 
-main $@
+main "$@"
