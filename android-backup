@@ -113,7 +113,8 @@ rsync_setup_remote() {
   if [[ -z "$(adb shell which \"${REMOTE_RSYNC_BIN}\")" ]]; then
     echo_info "Device doesn't have rsync."
     # try different locations for backup rsync
-    local script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    local script_dir
+    script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
     for rsync_src_dir in "${script_dir}" "/usr/local/lib/android-backup"; do
       local RSYNC_SRC="${rsync_src_dir}/rsync.bkp"
       [[ -e "${RSYNC_SRC}" ]] && break
@@ -133,7 +134,6 @@ rsync_setup_remote() {
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
   # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
   echo_debug "Writing remote rsync daemon config file ..."
-  adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[${REMOTE_RSYNC_MODULE}]\npath = /\nuse chroot = false\nread only = true\nlist = false\"" \> "${REMOTE_RSYNC_CONFIG}"
 
   echo_debug "Setting up port-forwarding ..."
   # forward a local port to the rsync daemon on the device
@@ -147,7 +147,8 @@ rsync_setup_remote() {
 
 find_remote_storages() {
   local android_storage_base="/storage"
-  local storage_candidates="$(adb shell ls "${android_storage_base}")"
+  local storage_candidates
+  storage_candidates=$(adb shell ls "${android_storage_base}")
 
   for storage_name in ${storage_candidates}
   do
@@ -200,7 +201,7 @@ usage() {
 
 
 main() {
-  parse_command_line_args $@
+  parse_command_line_args "$@"
 
   echo_debug "OPT_BACKUP_DIR=${OPT_BACKUP_DIR}"
   echo_debug "OPT_DEBUG=${OPT_DEBUG}"
@@ -230,7 +231,7 @@ main() {
   echo_debug "USER_RSYNC_FILTER_FILE=${USER_RSYNC_FILTER_FILE}"
   echo_debug "LOCAL_RSYNC_FILTER_FILE=${LOCAL_RSYNC_FILTER_FILE}"
   echo_debug "ANDROID_DEFAULT_STORAGE=${ANDROID_DEFAULT_STORAGE}"
-  echo_debug "REMOTE_STORAGES=${REMOTE_STORAGES}"
+  echo_debug "REMOTE_STORAGES=${REMOTE_STORAGES[*]}"
 
   if [[ ${OPT_ROOT} ]]; then
     adb root
@@ -245,23 +246,24 @@ main() {
 
   echo_info "Backing up user data ..."
   # start the backup
-  for remote_storage in ${REMOTE_STORAGES[@]}
+  for remote_storage in "${REMOTE_STORAGES[@]}"
   do
-    local storage_name="$(basename "${remote_storage}")"
+    local storage_name
+    storage_name=$(basename "${remote_storage}")
     echo_info "... backing up ${storage_name} ..."
     rsync_pull_module "${remote_storage}/" "${OPT_BACKUP_DIR}/${storage_name}/"
   done
   echo_info "... Done!"
-  
+
   # backup TitaniumBackup app separately
   echo_info "Backing up TitaniumBackup apps ..."
   adb_pull_app com.keramidas.TitaniumBackup "${OPT_BACKUP_DIR}/TitaniumBackup.apk"
   adb_pull_app com.keramidas.TitaniumBackupPro "${OPT_BACKUP_DIR}/TitaniumBackupPro.apk"
   echo_info "... Done!"
-  
+
   rsync_cleanup_remote
   rsync_cleanup_local
-  
+
   if [[ ${OPT_ROOT} ]]; then
     adb unroot
   fi
