@@ -5,6 +5,7 @@
 # Backs up your Android phone's storage(s).
 # It'll also back up your current TitaniumBackup apps for faster restoration.
 
+set -o nounset  # complain when reading unset vars
 
 # log everything using syslog
 exec 2>&1 | logger
@@ -26,7 +27,9 @@ readonly ANDROID_DEFAULT_STORAGE="/sdcard"
 
 
 echo_debug() {
-  [[ ${OPT_DEBUG} ]] && echo "Debug: $1"
+  if [[ ${OPT_DEBUG} ]]; then
+    echo "Debug: $1"
+  fi
 }
 echo_info() {
   echo "$1"
@@ -162,6 +165,10 @@ find_remote_storages() {
 
 
 parse_command_line_args() {
+  OPT_BACKUP_DIR=''
+  OPT_DEBUG=''
+  OPT_ROOT=''
+
   while [[ $# -gt 1 ]]
   do
     case "$1" in
