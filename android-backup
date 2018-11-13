@@ -154,7 +154,7 @@ rsync_setup_remote() {
   sleep 2
 
   echo_debug "Starting remote rsync daemon ..."
-  adb shell "${REMOTE_RSYNC_BIN} --daemon --no-detach --config=\"${REMOTE_RSYNC_CONFIG}\" &"  # for debugging --log-file=/proc/self/fd/2
+  adb shell "\"${REMOTE_RSYNC_BIN}\" --daemon --config=\"${REMOTE_RSYNC_CONFIG}\" &"  # for debugging --no-detach --log-file=/proc/self/fd/2
 }
 
 
