@@ -6,6 +6,7 @@
 # It'll also back up your current TitaniumBackup apps for faster restoration.
 
 set -o nounset  # complain when reading unset vars
+# set -o xtrace  # print every command as it's executed
 
 # log everything using syslog
 exec 2>&1 | logger
@@ -77,7 +78,11 @@ rsync_cleanup_remote() {
   fi
 }
 rsync_pull_module() {
-  rsync --partial --progress --archive --human-readable --delete \
+  local debug_options=''
+  # if [[ ${OPT_DEBUG} ]]; then
+  #   debug_options=" --verbose --debug=ALL"
+  # fi
+  rsync ${debug_options} --partial --progress --archive --human-readable --delete \
     --filter=". ${LOCAL_RSYNC_FILTER_FILE}" --prune-empty-dirs \
     "rsync://localhost:${LOCAL_RSYNC_PORT}/${REMOTE_RSYNC_MODULE}/$1" "$2"
   : rc $?
@@ -154,7 +159,11 @@ rsync_setup_remote() {
   sleep 2
 
   echo_debug "Starting remote rsync daemon ..."
-  adb shell "\"${REMOTE_RSYNC_BIN}\" --daemon --config=\"${REMOTE_RSYNC_CONFIG}\" &"  # for debugging --no-detach --log-file=/proc/self/fd/2
+  local debug_options=''
+  # if [[ ${OPT_DEBUG} ]]; then
+  #   debug_options="--verbose"  # for debugging --no-detach --log-file=/proc/self/fd/2
+  # fi
+  adb shell "\"${REMOTE_RSYNC_BIN}\" --daemon --config=\"${REMOTE_RSYNC_CONFIG}\" ${debug_options} &"
 }
 
 
