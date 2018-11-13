@@ -66,7 +66,7 @@ rsync_cleanup_local() {
 }
 rsync_cleanup_remote() {
   echo_debug "Killing rsync daemon ..."
-  adb shell killall "${REMOTE_RSYNC_BIN}"
+  adb shell killall "${REMOTE_RSYNC_BIN}" 2>/dev/null
   echo_debug "Removing port-forwarding ..."
   adb forward --remove tcp:${LOCAL_RSYNC_PORT}
   echo_debug "Removing remote rsync daemon config ..."
@@ -133,6 +133,10 @@ rsync_setup_remote() {
       exit 1
     fi
   fi
+
+  echo_debug "Killing rsync daemon ..."
+  adb shell killall "${REMOTE_RSYNC_BIN}" 2>/dev/null
+
   # setup rsync daemon on the device
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
   # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
