@@ -119,13 +119,13 @@ rsync_setup_remote() {
     local script_dir
     script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
     for rsync_src_dir in "${script_dir}" "/usr/local/lib/android-backup"; do
-      local RSYNC_SRC="${rsync_src_dir}/rsync.bkp"
-      [[ -e "${RSYNC_SRC}" ]] && break
+      local rsync_src="${rsync_src_dir}/rsync.bkp"
+      [[ -e "${rsync_src}" ]] && break
     done
     # have we found a backup rsync?
-    if [[ -e "${RSYNC_SRC}" ]]; then
-      echo_info "Providing temporary rsync from ${RSYNC_SRC} ..."
-      adb_push "${RSYNC_SRC}" "${REMOTE_TEMP_RSYNC_BIN}"
+    if [[ -e "${rsync_src}" ]]; then
+      echo_info "Providing temporary rsync from ${rsync_src} ..."
+      adb_push "${rsync_src}" "${REMOTE_TEMP_RSYNC_BIN}"
       adb shell chmod 755 "${REMOTE_TEMP_RSYNC_BIN}"
       REMOTE_RSYNC_BIN="${REMOTE_TEMP_RSYNC_BIN}"
     else
