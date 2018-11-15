@@ -115,7 +115,8 @@ EOT
 
 find_remote_storages() {
   local android_storage_base="/storage"
-  local storage_candidates="$(adb shell ls "${android_storage_base}")"
+  local storage_candidates
+  storage_candidates=$(adb shell ls "${android_storage_base}")
 
   for storage_name in ${storage_candidates}
   do
@@ -168,7 +169,7 @@ usage() {
 
 
 main() {
-  parse_command_line_args $@
+  parse_command_line_args "$@"
 
   if [[ ${OPT_DEBUG} ]]; then
     echo "OPT_DEBUG=${OPT_DEBUG}"
@@ -196,9 +197,10 @@ main() {
 
   echo "Restoring TitaniumBackup data first ..."
   local found_tb_dir=0
-  for remote_storage in ${REMOTE_STORAGES[@]}
+  for remote_storage in "${REMOTE_STORAGES[@]}"
   do
-    local storage_name="$(basename "${remote_storage}")"
+    local storage_name
+    storage_name=$(basename "${remote_storage}")
     local possible_tb_dir="${storage_name}/${TB_DIR}"
     [[ ! -d "${BACKUP_DIR}/${possible_tb_dir}" ]] && continue
     found_tb_dir=1
@@ -222,9 +224,10 @@ main() {
   done
 
   echo "Restoring some other things with priority ..."
-  for remote_storage in ${REMOTE_STORAGES[@]}
+  for remote_storage in "${REMOTE_STORAGES[@]}"
   do
-    local storage_name="$(basename "${remote_storage}")"
+    local storage_name
+    storage_name=$(basename "${remote_storage}")
     echo "... restoring ${storage_name} ..."
     for dir in ${PRIO_DIRS}; do
       [[ ! -d "${BACKUP_DIR}/${storage_name}/${dir}" ]] && continue
@@ -234,9 +237,10 @@ main() {
   echo "... Done!"
 
   echo "Restoring all the rest ..."
-  for remote_storage in ${REMOTE_STORAGES[@]}
+  for remote_storage in "${REMOTE_STORAGES[@]}"
   do
-    local storage_name="$(basename "${remote_storage}")"
+    local storage_name
+    storage_name=$(basename "${remote_storage}")
     echo "... restoring ${storage_name} ..."
     rsync_push "${BACKUP_DIR}/${storage_name}/" "${remote_storage}/"
   done
@@ -251,4 +255,4 @@ main() {
 }
 
 
-main $@
+main "$@"
