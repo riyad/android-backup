@@ -7,6 +7,7 @@
 
 
 set -o nounset  # complain when reading unset vars
+# set -o xtrace  # print every command as it's executed
 
 # log everything using syslog
 exec 2>&1 | logger
@@ -35,6 +36,22 @@ readonly PRIO_DIRS="WhatsApp DCIM Pictures"
 readonly SKIP_DIRS="${TB_DIR} ${TB_APKS} ${PRIO_DIRS}"
 
 
+echo_debug() {
+if [[ ${OPT_DEBUG} ]]; then
+  echo "Debug: $1"
+fi
+}
+echo_info() {
+  echo "$1"
+}
+echo_warn() {
+  echo "Warning: $1"
+}
+echo_error() {
+  echo "Error: $1"
+}
+
+
 alias adb="adb -d"
 adb_install() {
   adb install "$1"
@@ -43,14 +60,18 @@ adb_push() {
   adb push -p "$1" "$2"
 }
 rsync_cleanup_local() {
+  echo_debug "Removing local rsync filter file ..."
   [[ -e "${LOCAL_RSYNC_FILTER_FILE}" ]] && rm "${LOCAL_RSYNC_FILTER_FILE}"
 }
 rsync_cleanup_remote() {
-  adb shell killall "${REMOTE_RSYNC_BIN}"
+  echo_debug "Killing rsync daemon ..."
+  adb shell killall "${REMOTE_RSYNC_BIN}" 2>/dev/null
+  echo_debug "Removing port-forwarding ..."
   adb forward --remove tcp:${LOCAL_RSYNC_PORT}
+  echo_debug "Removing remote rsync daemon config ..."
   adb shell rm -f "${REMOTE_RSYNC_CONFIG}"
   if [[ -f "${REMOTE_TEMP_RSYNC_BIN}" ]]; then
-    echo "Cleaning up temporary rsync"
+    echo_debug "Removing provided remote rsync ..."
     adb shell rm -f "${REMOTE_TEMP_RSYNC_BIN}"
   fi
 }
@@ -66,6 +87,7 @@ rsync_setup_local() {
   rsync_setup_local_filter_file
 }
 rsync_setup_local_filter_file() {
+  echo_debug "Creating local rsync filter file ..."
   cat <<-EOT >> "${LOCAL_RSYNC_FILTER_FILE}"
 # ignore known cache files
 H .DS_Store
@@ -90,10 +112,15 @@ EOT
   if [[ -e "${USER_RSYNC_FILTER_FILE}" ]]; then
     echo "merge ${USER_RSYNC_FILTER_FILE}" >> "${LOCAL_RSYNC_FILTER_FILE}"
   fi
+
+  if [[ ${OPT_DEBUG} ]]; then
+    echo_debug "Contents of local rsync filter file:"
+    cat "${LOCAL_RSYNC_FILTER_FILE}" && echo ""
+  fi
 }
 rsync_setup_remote() {
   if [[ -z "$(adb shell which \"${REMOTE_RSYNC_BIN}\")" ]]; then
-    echo "Device doesn't have rsync."
+    echo_info "Device doesn't have rsync."
     # try different locations for backup rsync
     local script_dir
     script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
@@ -103,12 +130,12 @@ rsync_setup_remote() {
     done
     # have we found a backup rsync?
     if [[ -e "${rsync_src}" ]]; then
-      echo "Providing temporary rsync from ${rsync_src} ..."
+      echo_info "Providing temporary rsync from ${rsync_src} ..."
       adb_push "${rsync_src}" "${REMOTE_TEMP_RSYNC_BIN}"
       adb shell chmod 755 "${REMOTE_TEMP_RSYNC_BIN}"
       REMOTE_RSYNC_BIN="${REMOTE_TEMP_RSYNC_BIN}"
     else
-      echo "Can't provide temprorary rsync."
+      echo_error "Can't provide temporary rsync."
       exit 1
     fi
   fi
@@ -116,12 +143,16 @@ rsync_setup_remote() {
   # setup rsync daemon on the device
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
   # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
+  echo_debug "Writing remote rsync daemon config file ..."
   adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[${REMOTE_RSYNC_MODULE}]\npath = /\nuid = root\ngid = sdcard_rw\nread only = false\"" \> "${REMOTE_RSYNC_CONFIG}"
-  touch "${LOCAL_RSYNC_FILTER_FILE}"
-  adb shell "${REMOTE_RSYNC_BIN} --daemon --no-detach --config=\"${REMOTE_RSYNC_CONFIG}\" &"  # for debugging --log-file=/proc/self/fd/2
+
+  echo_debug "Setting up port-forwarding ..."
   # forward a local port to the rsync daemon on the device
   adb forward tcp:${LOCAL_RSYNC_PORT} tcp:${REMOTE_RSYNC_PORT}
   sleep 2
+
+  echo_debug "Starting remote rsync daemon ..."
+  adb shell "${REMOTE_RSYNC_BIN} --daemon --no-detach --config=\"${REMOTE_RSYNC_CONFIG}\" &"  # for debugging --log-file=/proc/self/fd/2
 }
 
 
@@ -187,14 +218,12 @@ usage() {
 main() {
   parse_command_line_args "$@"
 
-  if [[ ${OPT_DEBUG} ]]; then
-    echo "OPT_DEBUG=${OPT_DEBUG}"
-    echo "OPT_ROOT=${OPT_ROOT}"
-    echo "OPT_BACKUP_DIR=${OPT_BACKUP_DIR}"
-  fi
+  echo_debug "OPT_BACKUP_DIR=${OPT_BACKUP_DIR}"
+  echo_debug "OPT_DEBUG=${OPT_DEBUG}"
+  echo_debug "OPT_ROOT=${OPT_ROOT}"
 
   if [[ ! -d "${OPT_BACKUP_DIR}" ]]; then
-    echo "'${OPT_BACKUP_DIR}' is not a directory."
+    echo_error "'${OPT_BACKUP_DIR}' is not a directory."
     exit 1
   fi
 
@@ -211,7 +240,7 @@ main() {
   rsync_setup_local
   rsync_setup_remote
 
-  echo "Restoring TitaniumBackup data first ..."
+  echo_info "Restoring TitaniumBackup data first ..."
   local found_tb_dir=0
   for remote_storage in "${REMOTE_STORAGES[@]}"
   do
@@ -223,43 +252,44 @@ main() {
     rsync_push_module "${OPT_BACKUP_DIR}/${possible_tb_dir}/" "${remote_storage}/${TB_DIR}/"
   done
   if [ ${found_tb_dir} = 0 ]; then
-    echo "Can't find TitaniumBackup data directory"
+    echo_error "Can't find TitaniumBackup data directory"
     exit 1
   fi
-  echo "... Done!"
+  echo_info "... Done!"
 
   # install TitaniumBackup so we can start restoring stuff on the device itself
-  echo "Restoring TitaniumBackup apps ..."
+  echo_info "Restoring TitaniumBackup apps ..."
   for apk in ${TB_APKS}; do
     if [[ -f "${OPT_BACKUP_DIR}/${apk}" ]]; then
       adb_install "${OPT_BACKUP_DIR}/${apk}"
     else
-      echo "Can't find TitaniumBackup app ${apk}."
+      echo_error "Can't find TitaniumBackup app ${apk}."
       exit 1
     fi
   done
 
-  echo "Restoring some other things with priority ..."
+  echo_info "Restoring some other things with priority ..."
   for remote_storage in "${REMOTE_STORAGES[@]}"
   do
     local storage_name
     storage_name=$(basename "${remote_storage}")
-    echo "... restoring ${storage_name} ..."
+    echo_info "... restoring ${storage_name} ..."
     for dir in ${PRIO_DIRS}; do
       [[ ! -d "${OPT_BACKUP_DIR}/${storage_name}/${dir}" ]] && continue
       rsync_push_module "${OPT_BACKUP_DIR}/${storage_name}/${dir}/" "${remote_storage}/${dir}/"
     done
   done
-  echo "... Done!"
+  echo_info "... Done!"
 
-  echo "Restoring all the rest ..."
+  echo_info "Restoring all the rest ..."
   for remote_storage in "${REMOTE_STORAGES[@]}"
   do
     local storage_name
     storage_name=$(basename "${remote_storage}")
-    echo "... restoring ${storage_name} ..."
+    echo_info "... restoring ${storage_name} ..."
     rsync_push_module "${OPT_BACKUP_DIR}/${storage_name}/" "${remote_storage}/"
   done
+  echo_info "... Done!"
 
   rsync_cleanup_remote
   rsync_cleanup_local
@@ -267,8 +297,6 @@ main() {
   if [[ ${OPT_ROOT} ]]; then
     adb unroot
   fi
-
-  echo "... Done!"
 }
 
 
