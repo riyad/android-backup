@@ -76,10 +76,19 @@ rsync_cleanup_remote() {
   fi
 }
 rsync_push_module() {
-  # needs extra --temp-dir option against 'mkstemp "..." (in $REMOTE_RSYNC_MODULE) failed: Operation not permitted (1)' errors
-  # needs extra --no-times option against 'failed to set times on "..." (in $REMOTE_RSYNC_MODULE): Operation not permitted (1)' errors
-  rsync --partial --progress --archive --human-readable --delete \
-    --filter=". ${LOCAL_RSYNC_FILTER_FILE}" --temp-dir="${REMOTE_TEMP_DIR}" \
+  local debug_options=''
+  # if [[ ${OPT_DEBUG} ]]; then
+  #   debug_options=" --verbose --debug=ALL"
+  # fi
+  local root_options=''
+  if [[ ! ${OPT_ROOT} ]]; then
+    # needs --no-times against 'failed to set times on [...]: Operation not permitted (1)' errors
+    # needs --no-perms against 'failed to set permissions on [...]: Operation not permitted (1)' errors
+    root_options="--no-times --no-perms"
+  fi
+  # needs --temp-dir against 'mkstemp [...] failed: Operation not permitted (1)' errors
+  rsync ${debug_options} --partial --progress --archive --human-readable --delete \
+    --filter=". ${LOCAL_RSYNC_FILTER_FILE}" --temp-dir="${REMOTE_TEMP_DIR}" ${root_options} \
     "$1" "rsync://localhost:${LOCAL_RSYNC_PORT}/${REMOTE_RSYNC_MODULE}/$2"
   : rc $?
 }
@@ -140,11 +149,19 @@ rsync_setup_remote() {
     fi
   fi
 
+  echo_debug "Killing rsync daemon ..."
+  adb shell killall "${REMOTE_RSYNC_BIN}" 2>/dev/null
+
   # setup rsync daemon on the device
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
   # and http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html
   echo_debug "Writing remote rsync daemon config file ..."
-  adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[${REMOTE_RSYNC_MODULE}]\npath = /\nuid = root\ngid = sdcard_rw\nread only = false\"" \> "${REMOTE_RSYNC_CONFIG}"
+  if [[ ${OPT_ROOT} ]]; then
+    local root_options="use chroot = true\nuid = root\ngid = sdcard_rw\n"
+  else
+    local root_options="use chroot = false\n"
+  fi
+  adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[${REMOTE_RSYNC_MODULE}]\npath = /\n${root_options}read only = false\nlist = false\"" \> "${REMOTE_RSYNC_CONFIG}"
 
   echo_debug "Setting up port-forwarding ..."
   # forward a local port to the rsync daemon on the device
@@ -152,7 +169,11 @@ rsync_setup_remote() {
   sleep 2
 
   echo_debug "Starting remote rsync daemon ..."
-  adb shell "${REMOTE_RSYNC_BIN} --daemon --no-detach --config=\"${REMOTE_RSYNC_CONFIG}\" &"  # for debugging --log-file=/proc/self/fd/2
+  local debug_options=''
+  # if [[ ${OPT_DEBUG} ]]; then
+  #   debug_options="--verbose"  # for debugging --no-detach --log-file=/proc/self/fd/2
+  # fi
+  adb shell "${REMOTE_RSYNC_BIN} --daemon --config=\"${REMOTE_RSYNC_CONFIG}\" ${debug_options} &"
 }
 
 
