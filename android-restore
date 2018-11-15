@@ -6,6 +6,8 @@
 # You still need to restore your apps and config by running TitaniumBackup.
 
 
+set -o nounset  # complain when reading unset vars
+
 # log everything using syslog
 exec 2>&1 | logger
 
@@ -24,9 +26,9 @@ readonly LOCAL_RSYNC_FILTER_FILE=`mktemp -t "$(basename $0).XXXXXXXXXX"`
 # but in TWRP it's directly mounted to /sdcard (so the other dirs aren't there)
 readonly ANDROID_DEFAULT_STORAGE="/sdcard"
          REMOTE_STORAGES=("${ANDROID_DEFAULT_STORAGE}")
-# these are relative to BACKUP_DIR
+# these are relative to OPT_BACKUP_DIR
 readonly TB_APKS="TitaniumBackup.apk TitaniumBackupPro.apk"
-# these are relative to BACKUP_DIR/STORAGE_NAME
+# these are relative to OPT_BACKUP_DIR/STORAGE_NAME
 readonly TB_DIR="TitaniumBackup"
 readonly PRIO_DIRS="WhatsApp DCIM Pictures"
 readonly SKIP_DIRS="${TB_DIR} ${TB_APKS} ${PRIO_DIRS}"
@@ -133,6 +135,10 @@ find_remote_storages() {
 
 
 parse_command_line_args() {
+  OPT_BACKUP_DIR=''
+  OPT_DEBUG=''
+  OPT_ROOT=''
+
   while [[ $# -gt 1 ]]
   do
     case "$1" in
@@ -156,7 +162,7 @@ parse_command_line_args() {
     echo "Please specify the directory your backups are in!"
     exit 1
   else
-    readonly BACKUP_DIR="$1"
+    readonly OPT_BACKUP_DIR="$1"
   fi
 }
 
@@ -177,11 +183,11 @@ main() {
   if [[ ${OPT_DEBUG} ]]; then
     echo "OPT_DEBUG=${OPT_DEBUG}"
     echo "OPT_ROOT=${OPT_ROOT}"
-    echo "BACKUP_DIR=${BACKUP_DIR}"
+    echo "OPT_BACKUP_DIR=${OPT_BACKUP_DIR}"
   fi
 
-  if [[ ! -d "${BACKUP_DIR}" ]]; then
-    echo "'${BACKUP_DIR}' is not a directory."
+  if [[ ! -d "${OPT_BACKUP_DIR}" ]]; then
+    echo "'${OPT_BACKUP_DIR}' is not a directory."
     exit 1
   fi
 
@@ -205,9 +211,9 @@ main() {
     local storage_name
     storage_name=$(basename "${remote_storage}")
     local possible_tb_dir="${storage_name}/${TB_DIR}"
-    [[ ! -d "${BACKUP_DIR}/${possible_tb_dir}" ]] && continue
+    [[ ! -d "${OPT_BACKUP_DIR}/${possible_tb_dir}" ]] && continue
     found_tb_dir=1
-    rsync_push "${BACKUP_DIR}/${possible_tb_dir}/" "${remote_storage}/${TB_DIR}/"
+    rsync_push "${OPT_BACKUP_DIR}/${possible_tb_dir}/" "${remote_storage}/${TB_DIR}/"
   done
   if [ ${found_tb_dir} = 0 ]; then
     echo "Can't find TitaniumBackup data directory"
@@ -218,8 +224,8 @@ main() {
   # install TitaniumBackup so we can start restoring stuff on the device itself
   echo "Restoring TitaniumBackup apps ..."
   for apk in ${TB_APKS}; do
-    if [[ -f "${BACKUP_DIR}/${apk}" ]]; then
-      adb_install "${BACKUP_DIR}/${apk}"
+    if [[ -f "${OPT_BACKUP_DIR}/${apk}" ]]; then
+      adb_install "${OPT_BACKUP_DIR}/${apk}"
     else
       echo "Can't find TitaniumBackup app ${apk}."
       exit 1
@@ -233,8 +239,8 @@ main() {
     storage_name=$(basename "${remote_storage}")
     echo "... restoring ${storage_name} ..."
     for dir in ${PRIO_DIRS}; do
-      [[ ! -d "${BACKUP_DIR}/${storage_name}/${dir}" ]] && continue
-      rsync_push "${BACKUP_DIR}/${storage_name}/${dir}/" "${remote_storage}/${dir}/"
+      [[ ! -d "${OPT_BACKUP_DIR}/${storage_name}/${dir}" ]] && continue
+      rsync_push "${OPT_BACKUP_DIR}/${storage_name}/${dir}/" "${remote_storage}/${dir}/"
     done
   done
   echo "... Done!"
@@ -245,7 +251,7 @@ main() {
     local storage_name
     storage_name=$(basename "${remote_storage}")
     echo "... restoring ${storage_name} ..."
-    rsync_push "${BACKUP_DIR}/${storage_name}/" "${remote_storage}/"
+    rsync_push "${OPT_BACKUP_DIR}/${storage_name}/" "${remote_storage}/"
   done
 
   rsync_cleanup
