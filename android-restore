@@ -1,6 +1,7 @@
 #!/bin/bash
 #
-# Riyad Preukschas <riyad@informatik.uni-bremen.de>
+# Author: Riyad Preukschas <riyad@informatik.uni-bremen.de>
+# License: Mozilla Public License 2.0
 #
 # Restores previously backed-up files to your Android phone.
 # You still need to restore your apps and config by running TitaniumBackup.

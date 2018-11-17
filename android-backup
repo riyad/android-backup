@@ -1,6 +1,7 @@
 #!/bin/bash
 #
-# Riyad Preukschas <riyad@informatik.uni-bremen.de>
+# Author: Riyad Preukschas <riyad@informatik.uni-bremen.de>
+# License: Mozilla Public License 2.0
 #
 # Backs up your Android phone's storage(s).
 # It'll also back up your current TitaniumBackup apps for faster restoration.
