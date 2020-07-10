@@ -199,6 +199,19 @@ parse_command_line_args() {
   OPT_DEBUG=''
   OPT_ROOT=''
 
+  if [[ $# -eq 0 ]]; then
+    usage
+    exit 1
+  elif [[ $# -eq 1 ]]; then
+    case "$1" in
+      -h|--help)
+        usage
+        exit 1
+      ;;
+      # default: fall through
+    esac
+  fi
+
   while [[ $# -gt 1 ]]
   do
     case "$1" in
