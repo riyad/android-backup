@@ -8,7 +8,7 @@ Assuming you're using also something like [Titanium Backup](https://play.google.
 
 It uses [ADB](https://developer.android.com/tools/help/adb.html) for setup and [rsync](https://en.wikipedia.org/wiki/Rsync) to do the copying since the [Android File Transfer Tool](https://www.android.com/filetransfer/) for Mac has a laughable quality for Google’s standards.
 
-It's based on a [pure ADB version](https://gist.github.com/riyad/d7977d0ba432f21bd0bf) by Riyad Preukschas and has been improved with ideas and methods from [Simon Josefsson](https://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/) and [pts](http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html).
+It's based on a [pure ADB version](https://github.com/riyad/android-backup/releases/tag/adb-pull-push-only) by Riyad Preukschas and has been improved with ideas and methods from [Simon Josefsson](https://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/) and [pts](http://ptspts.blogspot.de/2015/03/how-to-use-rsync-over-adb-on-android.html).
 
 ## Installation
 
