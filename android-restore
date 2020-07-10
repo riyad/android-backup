@@ -88,7 +88,7 @@ rsync_push_module() {
     root_options="--no-times --no-perms"
   fi
   # needs --temp-dir against 'mkstemp [...] failed: Operation not permitted (1)' errors
-  rsync ${debug_options} --partial --progress --archive --human-readable --delete \
+  rsync ${debug_options} --partial --progress --archive --human-readable \
     --filter=". ${LOCAL_RSYNC_FILTER_FILE}" --temp-dir="${REMOTE_TEMP_DIR}" ${root_options} \
     "$1" "rsync://localhost:${LOCAL_RSYNC_PORT}/${REMOTE_RSYNC_MODULE}/$2"
   : rc $?
