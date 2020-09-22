@@ -169,6 +169,37 @@ rsync_setup_remote() {
 }
 
 
+compare_serialno() {
+  local local_serialno
+  local local_serialno_localtion="${OPT_BACKUP_DIR}/device_serialno"
+  local remote_serialno
+  remote_serialno=$(adb -d get-serialno)
+  # alternative: adb -d shell getprop | grep ro.boot.serialno | sed -r 's/^\[ro.boot.serialno\]: \[(.+)\]$/\1/g'
+
+  echo_debug "Device serial number: ${remote_serialno}"
+
+  if [[ ! -f "${local_serialno_localtion}" ]]; then
+    echo_warn "No device serial number in backup directory"
+    echo_info "Saving device serial number to backup directory"
+    echo -n "${remote_serialno}" > "${local_serialno_localtion}"
+    return
+  fi
+
+  local_serialno="$(cat ${local_serialno_localtion})"
+  echo_debug "Loaded device serial number from backup directory: ${local_serialno}"
+
+  if [[ "${local_serialno}" != "${remote_serialno}" ]]; then
+    echo_error "Device serial numbers don't match!"
+    echo_info "Serial number from backup directory: ${local_serialno}"
+    echo_info "Serial number from device: ${remote_serialno}"
+    echo_info "A mismatch can happen when you mix up backup directories or have a new device."
+    echo_info "If you you want to continue anyway, you can delete \"${local_serialno_localtion}\" and restart the backup."
+    exit 3
+  fi
+
+  echo_info "Device serial numbers match."
+}
+
 find_remote_storages() {
   local android_storage_base="/storage"
   local storage_candidates
@@ -278,6 +309,8 @@ main() {
   echo_debug "LOCAL_RSYNC_FILTER_FILE=${LOCAL_RSYNC_FILTER_FILE}"
   echo_debug "ANDROID_DEFAULT_STORAGE=${ANDROID_DEFAULT_STORAGE}"
   echo_debug "REMOTE_STORAGES=${REMOTE_STORAGES[*]}"
+
+  compare_serialno
 
   if [[ ${OPT_ROOT} ]]; then
     adb root
