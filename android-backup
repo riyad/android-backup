@@ -187,6 +187,7 @@ compare_serialno() {
 
   local_serialno="$(cat ${local_serialno_localtion})"
   echo_debug "Loaded device serial number from backup directory: ${local_serialno}"
+  ADB="adb -s ${local_serialno}"
 
   if [[ "${local_serialno}" != "${remote_serialno}" ]]; then
     echo_error "Device serial numbers don't match!"
