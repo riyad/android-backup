@@ -193,7 +193,7 @@ compare_serialno() {
     echo_info "Serial number from backup directory: ${local_serialno}"
     echo_info "Serial number from device: ${remote_serialno}"
     echo_info "A mismatch can happen when you mix up backup directories or have a new device."
-    echo_info "If you you want to continue anyway, you can delete \"${local_serialno_localtion}\" and restart the backup."
+    echo_info "If you you want to continue anyway, you can rename or delete \"${local_serialno_localtion}\" and rerun this script."
     exit 3
   fi
 
