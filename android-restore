@@ -35,6 +35,7 @@ readonly TB_APKS="TitaniumBackup.apk TitaniumBackupPro.apk"
 readonly TB_DIR="TitaniumBackup"
 readonly PRIO_DIRS="WhatsApp DCIM Pictures"
 readonly SKIP_DIRS="${TB_DIR} ${TB_APKS} ${PRIO_DIRS}"
+         ADB="adb -d"
 
 
 echo_debug() {
@@ -53,12 +54,11 @@ echo_error() {
 }
 
 
-alias adb="adb -d"
 adb_install() {
-  adb install "$1"
+  ${ADB} install "$1"
 }
 adb_push() {
-  adb push -p "$1" "$2"
+  ${ADB} push -p "$1" "$2"
 }
 rsync_cleanup_local() {
   echo_debug "Removing local rsync filter file ..."
@@ -66,14 +66,14 @@ rsync_cleanup_local() {
 }
 rsync_cleanup_remote() {
   echo_debug "Killing rsync daemon ..."
-  adb shell killall "${REMOTE_RSYNC_BIN}" 2>/dev/null
+  ${ADB} shell killall "${REMOTE_RSYNC_BIN}" 2>/dev/null
   echo_debug "Removing port-forwarding ..."
-  adb forward --remove tcp:${LOCAL_RSYNC_PORT}
+  ${ADB} forward --remove tcp:${LOCAL_RSYNC_PORT}
   echo_debug "Removing remote rsync daemon config ..."
-  adb shell rm -f "${REMOTE_RSYNC_CONFIG}"
+  ${ADB} shell rm -f "${REMOTE_RSYNC_CONFIG}"
   if [[ -f "${REMOTE_TEMP_RSYNC_BIN}" ]]; then
     echo_debug "Removing provided remote rsync ..."
-    adb shell rm -f "${REMOTE_TEMP_RSYNC_BIN}"
+    ${ADB} shell rm -f "${REMOTE_TEMP_RSYNC_BIN}"
   fi
 }
 rsync_push_module() {
@@ -129,7 +129,7 @@ EOT
   fi
 }
 rsync_setup_remote() {
-  if [[ -z "$(adb shell which \"${REMOTE_RSYNC_BIN}\")" ]]; then
+  if [[ -z "$(${ADB} shell which \"${REMOTE_RSYNC_BIN}\")" ]]; then
     echo_info "Device doesn't have rsync."
     # try different locations for backup rsync
     local script_dir
@@ -142,7 +142,7 @@ rsync_setup_remote() {
     if [[ -e "${rsync_src}" ]]; then
       echo_info "Providing temporary rsync from ${rsync_src} ..."
       adb_push "${rsync_src}" "${REMOTE_TEMP_RSYNC_BIN}"
-      adb shell chmod 755 "${REMOTE_TEMP_RSYNC_BIN}"
+      ${ADB} shell chmod 755 "${REMOTE_TEMP_RSYNC_BIN}"
       REMOTE_RSYNC_BIN="${REMOTE_TEMP_RSYNC_BIN}"
     else
       echo_error "Can't provide temporary rsync."
@@ -151,7 +151,7 @@ rsync_setup_remote() {
   fi
 
   echo_debug "Killing rsync daemon ..."
-  adb shell killall "${REMOTE_RSYNC_BIN}" 2>/dev/null
+  ${ADB} shell killall "${REMOTE_RSYNC_BIN}" 2>/dev/null
 
   # setup rsync daemon on the device
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
@@ -162,11 +162,11 @@ rsync_setup_remote() {
   else
     local root_options="use chroot = false\n"
   fi
-  adb shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[${REMOTE_RSYNC_MODULE}]\npath = /\n${root_options}read only = false\nlist = false\"" \> "${REMOTE_RSYNC_CONFIG}"
+  ${ADB} shell "echo \"address = 127.0.0.1\nport = ${REMOTE_RSYNC_PORT}\n\n[${REMOTE_RSYNC_MODULE}]\npath = /\n${root_options}read only = false\nlist = false\"" \> "${REMOTE_RSYNC_CONFIG}"
 
   echo_debug "Setting up port-forwarding ..."
   # forward a local port to the rsync daemon on the device
-  adb forward tcp:${LOCAL_RSYNC_PORT} tcp:${REMOTE_RSYNC_PORT}
+  ${ADB} forward tcp:${LOCAL_RSYNC_PORT} tcp:${REMOTE_RSYNC_PORT}
   sleep 2
 
   echo_debug "Starting remote rsync daemon ..."
@@ -174,14 +174,14 @@ rsync_setup_remote() {
   # if [[ ${OPT_DEBUG} ]]; then
   #   debug_options="--verbose"  # for debugging --no-detach --log-file=/proc/self/fd/2
   # fi
-  adb shell "${REMOTE_RSYNC_BIN} --daemon --config=\"${REMOTE_RSYNC_CONFIG}\" ${debug_options} &"
+  ${ADB} shell "${REMOTE_RSYNC_BIN} --daemon --config=\"${REMOTE_RSYNC_CONFIG}\" ${debug_options} &"
 }
 
 
 find_remote_storages() {
   local android_storage_base="/storage"
   local storage_candidates
-  storage_candidates=$(adb shell ls "${android_storage_base}")
+  storage_candidates=$(${ADB} shell ls "${android_storage_base}")
 
   for storage_name in ${storage_candidates}
   do
@@ -263,9 +263,9 @@ main() {
   fi
 
   if [[ ${OPT_ROOT} ]]; then
-    adb root
+    ${ADB} root
   fi
-  adb wait-for-device
+  ${ADB} wait-for-device
 
   # will add entries to REMOTE_STORAGES
   find_remote_storages
@@ -330,7 +330,7 @@ main() {
   rsync_cleanup_local
 
   if [[ ${OPT_ROOT} ]]; then
-    adb unroot
+    ${ADB} unroot
   fi
 }
 
