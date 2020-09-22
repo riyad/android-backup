@@ -137,7 +137,7 @@ rsync_setup_remote() {
       REMOTE_RSYNC_BIN="${REMOTE_TEMP_RSYNC_BIN}"
     else
       echo_error "Can't provide temporary rsync."
-      exit 1
+      exit 4
     fi
   fi
 
@@ -260,7 +260,7 @@ main() {
     case $yn in
       'Yes'* ) ;;  # just get through
       'No'* ) exit;;
-      * ) exit 1;;
+      * ) exit 2;;
     esac
   fi
 

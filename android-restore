@@ -146,7 +146,7 @@ rsync_setup_remote() {
       REMOTE_RSYNC_BIN="${REMOTE_TEMP_RSYNC_BIN}"
     else
       echo_error "Can't provide temporary rsync."
-      exit 1
+      exit 4
     fi
   fi
 
@@ -259,7 +259,7 @@ main() {
 
   if [[ ! -d "${OPT_BACKUP_DIR}" ]]; then
     echo_error "'${OPT_BACKUP_DIR}' is not a directory."
-    exit 1
+    exit 2
   fi
 
   if [[ ${OPT_ROOT} ]]; then
@@ -288,7 +288,7 @@ main() {
   done
   if [ ${found_tb_dir} = 0 ]; then
     echo_error "Can't find TitaniumBackup data directory"
-    exit 1
+    exit 5
   fi
   echo_info "... Done!"
 
@@ -299,7 +299,7 @@ main() {
       adb_install "${OPT_BACKUP_DIR}/${apk}"
     else
       echo_error "Can't find TitaniumBackup app ${apk}."
-      exit 1
+      exit 5
     fi
   done
 
