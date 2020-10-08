@@ -76,9 +76,11 @@ android-restore <backup-dir>
   The files seem to still get restored fine (with the caveat above).
   Otherwise please use the contact information below.
 
-## Extract Rsync for Android Yourself
+## Extract Rsync Binary From Android
 
-The provided rsync.bkp file was extracted from LineageOS 14.1-20170131-NIGHTLY for OnePlus X via
+The provided rsync.bkp file was extracted from LineageOS 14.1-20181110-NIGHTLY for OnePlus X (i.e. Android 7.1.2; API 25; armeabi-v7a). This will work on newer Android versions as well as arm64-v8a ABI, but not the other way round.
+
+You can do this yourself via:
 
 ```shell
 adb shell which rsync
