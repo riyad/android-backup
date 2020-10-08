@@ -130,7 +130,7 @@ EOT
   fi
 }
 rsync_setup_remote() {
-  if [[ -z "$(${ADB} shell which \"${REMOTE_RSYNC_BIN}\")" ]]; then
+  if [[ -z "$(${ADB} shell command -v \"${REMOTE_RSYNC_BIN}\")" ]]; then
     echo_info "Device doesn't have rsync."
     # try different locations for backup rsync
     local script_dir
