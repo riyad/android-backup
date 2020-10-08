@@ -89,13 +89,13 @@ adb pull /system/xbin/rsync rsync.bkp
 
 NOTE: The following steps assume you already have the Android NDK installed.
 
-Clone the rsync for android source (e.g. from @CyanogenMod) ...
+Clone the rsync for android source (e.g. from @LineageOS) ...
 
 ```shell
 git clone https://github.com/LineageOS/android_external_rsync.git
 cd android_external_rsync
 # checkout the most recent branch
-git checkout cm-14.1
+git checkout cm-18.1
 ```
 
 ... create the missing `Application.mk` build file ...
@@ -103,7 +103,7 @@ git checkout cm-14.1
 ```
 mkdir jni
 # create missing build script (e.g. from https://gist.github.com/riyad/59c17ce7a1ade6cfc3c6)
-wget -O jni/Application.mk https://gist.githubusercontent.com/riyad/59c17ce7a1ade6cfc3c6/raw/b56679f6188d9f56315dcd5e904fad0f9bd1439d/Application.mk
+wget -O jni/Application.mk https://gist.githubusercontent.com/riyad/59c17ce7a1ade6cfc3c6/raw/6a0c6aa9c8a4273ad304085f4e568ceedfbe0b48/Application.mk
 ```
 
 ... and start the build with:
