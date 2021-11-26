@@ -181,19 +181,19 @@ rsync_setup_remote() {
 
 compare_serialno() {
   local local_serialno
-  local local_serialno_localtion="${OPT_BACKUP_DIR}/device_serialno"
+  local local_serialno_location="${OPT_BACKUP_DIR}/device_serialno"
   local remote_serialno
   remote_serialno=$(${ADB} get-serialno)
   # alternative: ${ADB} shell getprop | grep ro.boot.serialno | sed -r 's/^\[ro.boot.serialno\]: \[(.+)\]$/\1/g'
 
   echo_debug "Device serial number: ${remote_serialno}"
 
-  if [[ ! -f "${local_serialno_localtion}" ]]; then
+  if [[ ! -f "${local_serialno_location}" ]]; then
     echo_warn "No device serial number in backup directory"
     return
   fi
 
-  local_serialno="$(cat ${local_serialno_localtion})"
+  local_serialno="$(cat ${local_serialno_location})"
   echo_debug "Loaded device serial number from backup directory: ${local_serialno}"
   ADB="adb -s ${local_serialno}"
 
@@ -202,7 +202,7 @@ compare_serialno() {
     echo_info "Serial number from backup directory: ${local_serialno}"
     echo_info "Serial number from device: ${remote_serialno}"
     echo_info "A mismatch can happen when you mix up backup directories or have a new device."
-    echo_info "If you you want to continue anyway, you can rename or delete \"${local_serialno_localtion}\" and rerun this script."
+    echo_info "If you you want to continue anyway, you can rename or delete \"${local_serialno_location}\" and rerun this script."
     exit 3
   fi
 
