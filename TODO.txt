@@ -1,11 +1,12 @@
+* Detect when no device is connected
 * Add option to force using the backup rsync
 * Try to get root on the device automatically (if possible)
-* Allow selecting verbosity level (research: apt, ansible, etc.)
+* Allow selecting verbosity level (look at: spectre-meltdown-checker)
   * level 0 (echo_error): -q,--quiet
   * level 1 (echo_warn):
   * level 2 (echo_info): default?
   * level 3 (echo_debug): -v,--verbosity=3
-  * --debug: really hadcore rsync debug output
+  * --debug: really hardcore rsync debug output
 * Catch error when TitaniumBackup is installed aready
   i.e. "Failed to install ./tmp/druk//TitaniumBackup.apk: Failure [INSTALL_FAILED_ALREADY_EXISTS: Attempt to re-install com.keramidas.TitaniumBackup without first uninstalling.]"
 * Save rsync daemon pid in file (and kill it using that)

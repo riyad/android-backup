@@ -66,11 +66,11 @@ android-restore <backup-dir>
 
 ## Caveats
 
-### without root
+### Without Root
 
-* Currently restoring will not be able to be able to restore the correct timestamps of files.
+* Currently restoring will fail to restore the correct timestamps of files.
   They'll be set to the date and time of when you're restoring them.
-  This will cause all of those files to be downloaded again for the first backup, because it will look as if those files have changed.
+  This will cause all of those files to be downloaded again for the first backup, because it will look as if those files were updated.
 
 * During data transfer you may see errors like `rsync: readlink_stat("/path/to/some/file" (in root)) failed: Permission denied (13)` followed later by `rsync: recv_generator: failed to stat "/path/to/some/file" (in root): Permission denied (13)`.
   The files seem to still get restored fine (with the caveat above).
@@ -116,6 +116,12 @@ ndk-build -d rsync
 ```
 
 Find your self-build rsync in `obj/local/*/rsync`.
+
+## Tested With
+
+* Nexus 5, LineageOS 14.1 (Android 7.1.2)
+* OnePlus X, LineageOS 14.1 (Android 7.1.2)
+* Samsung Galaxy S9, LineageOS 17.1 (Android 10)
 
 ## Contact and Issues
 
