@@ -36,7 +36,9 @@ readonly TB_APKS="TitaniumBackup.apk TitaniumBackupPro.apk"
 readonly TB_DIR="TitaniumBackup"
 readonly PRIO_DIRS="WhatsApp DCIM Pictures"
 readonly SKIP_DIRS="${TB_DIR} ${TB_APKS} ${PRIO_DIRS}"
-         ADB="adb -d"
+         DEVICE_SERIALNO="---NO-DEVICE---"
+         ADB_RAW="adb"
+         ADB="${ADB_RAW} -s ${DEVICE_SERIALNO}"
 
 
 echo_debug() {
@@ -183,7 +185,7 @@ compare_serialno() {
   local local_serialno
   local local_serialno_location="${OPT_BACKUP_DIR}/device_serialno"
   local remote_serialno
-  remote_serialno=$(${ADB} get-serialno)
+  remote_serialno=$(${ADB_RAW} -d get-serialno)
   # alternative: ${ADB} shell getprop | grep ro.boot.serialno | sed -r 's/^\[ro.boot.serialno\]: \[(.+)\]$/\1/g'
 
   echo_debug "Device serial number: ${remote_serialno}"
@@ -195,7 +197,7 @@ compare_serialno() {
 
   local_serialno="$(cat ${local_serialno_location})"
   echo_debug "Loaded device serial number from backup directory: ${local_serialno}"
-  ADB="adb -s ${local_serialno}"
+  DEVICE_SERIALNO="${local_serialno}"
 
   if [[ "${local_serialno}" != "${remote_serialno}" ]]; then
     echo_error "Device serial numbers don't match!"
@@ -295,6 +297,7 @@ main() {
   fi
 
   compare_serialno
+  ADB="${ADB_RAW} -s ${DEVICE_SERIALNO}"
 
   if [[ ${OPT_ROOT} ]]; then
     ${ADB} root

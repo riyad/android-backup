@@ -28,7 +28,9 @@ readonly LOCAL_RSYNC_FILTER_FILE=`mktemp -t "$(basename $0).XXXXXXXXXX"`
 # but in TWRP it's directly mounted to /sdcard (so the other dirs aren't there)
 readonly ANDROID_DEFAULT_STORAGE="/sdcard"
          REMOTE_STORAGES=("${ANDROID_DEFAULT_STORAGE}")
-         ADB="adb -d"
+         DEVICE_SERIALNO="---NO-DEVICE---"
+         ADB_RAW="adb"
+         ADB="${ADB_RAW} -s ${DEVICE_SERIALNO}"
 
 
 echo_debug() {
@@ -174,7 +176,7 @@ compare_serialno() {
   local local_serialno
   local local_serialno_location="${OPT_BACKUP_DIR}/device_serialno"
   local remote_serialno
-  remote_serialno=$(${ADB} get-serialno)
+  remote_serialno=$(${ADB_RAW} -d get-serialno)
   # alternative: ${ADB} shell getprop | grep ro.boot.serialno | sed -r 's/^\[ro.boot.serialno\]: \[(.+)\]$/\1/g'
 
   echo_debug "Device serial number: ${remote_serialno}"
@@ -188,7 +190,7 @@ compare_serialno() {
 
   local_serialno="$(cat ${local_serialno_location})"
   echo_debug "Loaded device serial number from backup directory: ${local_serialno}"
-  ADB="adb -s ${local_serialno}"
+  DEVICE_SERIALNO="${local_serialno}"
 
   if [[ "${local_serialno}" != "${remote_serialno}" ]]; then
     echo_error "Device serial numbers don't match!"
@@ -300,6 +302,9 @@ main() {
   echo_debug "Creating ${OPT_BACKUP_DIR}."
   mkdir -p "${OPT_BACKUP_DIR}"
 
+  compare_serialno
+  ADB="${ADB_RAW} -s ${DEVICE_SERIALNO}"
+
   echo_debug "REMOTE_TEMP_DIR=${REMOTE_TEMP_DIR}"
   echo_debug "REMOTE_RSYNC_CONFIG=${REMOTE_RSYNC_CONFIG}"
   echo_debug "REMOTE_RSYNC_PORT=${REMOTE_RSYNC_PORT}"
@@ -311,8 +316,8 @@ main() {
   echo_debug "LOCAL_RSYNC_FILTER_FILE=${LOCAL_RSYNC_FILTER_FILE}"
   echo_debug "ANDROID_DEFAULT_STORAGE=${ANDROID_DEFAULT_STORAGE}"
   echo_debug "REMOTE_STORAGES=${REMOTE_STORAGES[*]}"
-
-  compare_serialno
+  echo_debug "DEVICE_SERIALNO=${DEVICE_SERIALNO}"
+  echo_debug "ADB=${ADB}"
 
   if [[ ${OPT_ROOT} ]]; then
     ${ADB} root
