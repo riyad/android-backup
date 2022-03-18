@@ -195,7 +195,7 @@ compare_serialno() {
     return
   fi
 
-  local_serialno="$(cat ${local_serialno_location})"
+  local_serialno="$(<"${local_serialno_location}")"
   echo_debug "Loaded device serial number from backup directory: ${local_serialno}"
   DEVICE_SERIALNO="${local_serialno}"
 
