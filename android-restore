@@ -5,7 +5,8 @@
 # SPDX-License-Identifier: MPL-2.0
 #
 # Restores previously backed-up files to your Android phone.
-# You still need to restore your apps and config by running TitaniumBackup.
+# You still need to restore your apps and config by running your backup app
+# (e.g. Neo Backup, TitaniumBackup).
 
 
 set -o nounset  # complain when reading unset vars
@@ -31,9 +32,9 @@ readonly LOCAL_RSYNC_FILTER_FILE=`mktemp -t "$(basename $0).XXXXXXXXXX"`
 readonly ANDROID_DEFAULT_STORAGE="/sdcard"
          REMOTE_STORAGES=("${ANDROID_DEFAULT_STORAGE}")
 # these are relative to OPT_BACKUP_DIR
-readonly TB_APKS="TitaniumBackup.apk TitaniumBackupPro.apk"
+readonly BKP_APKS="Neo-Backup.apk TitaniumBackup.apk TitaniumBackupPro.apk"
 # these are relative to OPT_BACKUP_DIR/STORAGE_NAME
-readonly PRIO_DIRS=("TitaniumBackup" "Android/media/com.whatsapp/" "DCIM" "Pictures")
+readonly PRIO_DIRS=(".SeedVaultAndroidBackup" "Neo Backup" "TitaniumBackup" "Android/media/com.whatsapp/" "DCIM" "Pictures")
          DEVICE_SERIALNO="---NO-DEVICE---"
          ADB_RAW="adb"
          ADB="${ADB_RAW} -s ${DEVICE_SERIALNO}"
@@ -311,13 +312,13 @@ main() {
   rsync_setup_local
   rsync_setup_remote
 
-  # install TitaniumBackup so we can start restoring stuff on the device itself
-  echo_info "Restoring TitaniumBackup apps ..."
-  for apk in ${TB_APKS}; do
+  # install backup app so we can start restoring stuff on the device itself
+  echo_info "Restoring backup apps ..."
+  for apk in ${BKP_APKS}; do
     if [[ -f "${OPT_BACKUP_DIR}/${apk}" ]]; then
       adb_install "${OPT_BACKUP_DIR}/${apk}"
     else
-      echo_warn "Can't find TitaniumBackup app ${apk}."
+      echo_warn "Can't find app ${apk}"
       echo_info "... Skipped!"
     fi
   done
@@ -346,6 +347,12 @@ main() {
     rsync_push_module "${OPT_BACKUP_DIR}/${storage_name}/" "${remote_storage}/"
   done
   echo_info "... Done!"
+
+  # TODO: determine we're actually using Seedvault
+  echo_warn "If you're using Seedvault you might not be able to start restoring from the UI"
+  echo "    In that case you can start the Seedvault restoration process by running:"
+  echo "    ${ADB} shell ${ADB_SU_OPTIONS} \"am start-activity -a com.stevesoltys.seedvault.RESTORE_BACKUP\""
+  # see https://github.com/seedvault-app/seedvault/wiki/FAQ#how-to-restore-after-passing-through-setup-wizard
 
   rsync_cleanup_remote
   rsync_cleanup_local

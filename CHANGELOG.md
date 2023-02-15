@@ -3,6 +3,10 @@
 ## v0.8.0
 
 * use `su` instead of `adb root` to prevent errors like "adbd cannot run as root in production builds"
+* recognize there're other (maintained) backup tools (now also for Seedvault and Neo Backup)
+  * install APKs if necessary
+  * restore their data directories with priority
+  * print instructions for starting the restoration process
 
 ## v0.7.1
 

@@ -5,7 +5,8 @@
 # SPDX-License-Identifier: MPL-2.0
 #
 # Backs up your Android phone's storage(s).
-# It'll also back up your current TitaniumBackup apps for faster restoration.
+# It'll also back up your current backup apps for faster restoration
+# (e.g. Neo Backup, TitaniumBackup).
 
 
 set -o nounset  # complain when reading unset vars
@@ -54,7 +55,7 @@ adb_package_path() {
 }
 adb_pull_app() {
   if [[ -z "$(adb_package_path \"$1\")" ]]; then
-    echo_error "Can't find app $1"
+    echo_warn "Can't find app $1"
     return 1
   else
     rsync_pull_module "$(adb_package_path \"$1\")" "$2"
@@ -99,6 +100,7 @@ rsync_setup_local_filter_file() {
   echo_debug "Creating local rsync filter file ..."
   cat <<-EOT >> "${LOCAL_RSYNC_FILTER_FILE}"
 # don't let rsync delete these
+P /Neo-Backup.apk
 P /TitaniumBackup.apk
 P /TitaniumBackupPro.apk
 # don't sync common cache files and directories
@@ -341,8 +343,9 @@ main() {
   done
   echo_info "... Done!"
 
-  # backup TitaniumBackup app separately
-  echo_info "Backing up TitaniumBackup apps ..."
+  # backup backup apps separately
+  echo_info "Backing up backup apps ..."
+  adb_pull_app com.machiav3lli.backup "${OPT_BACKUP_DIR}/Neo-Backup.apk"
   adb_pull_app com.keramidas.TitaniumBackup "${OPT_BACKUP_DIR}/TitaniumBackup.apk"
   adb_pull_app com.keramidas.TitaniumBackupPro "${OPT_BACKUP_DIR}/TitaniumBackupPro.apk"
   echo_info "... Done!"
