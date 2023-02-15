@@ -33,9 +33,8 @@ readonly ANDROID_DEFAULT_STORAGE="/sdcard"
 # these are relative to OPT_BACKUP_DIR
 readonly TB_APKS="TitaniumBackup.apk TitaniumBackupPro.apk"
 # these are relative to OPT_BACKUP_DIR/STORAGE_NAME
-readonly TB_DIR="TitaniumBackup"
-readonly PRIO_DIRS="WhatsApp DCIM Pictures"
 readonly SKIP_DIRS="${TB_DIR} ${TB_APKS} ${PRIO_DIRS}"
+readonly PRIO_DIRS="TitaniumBackup WhatsApp DCIM Pictures"
          DEVICE_SERIALNO="---NO-DEVICE---"
          ADB_RAW="adb"
          ADB="${ADB_RAW} -s ${DEVICE_SERIALNO}"
@@ -313,31 +312,14 @@ main() {
   rsync_setup_local
   rsync_setup_remote
 
-  echo_info "Restoring TitaniumBackup data first ..."
-  local found_tb_dir=0
-  for remote_storage in "${REMOTE_STORAGES[@]}"
-  do
-    local storage_name
-    storage_name=$(basename "${remote_storage}")
-    local possible_tb_dir="${storage_name}/${TB_DIR}"
-    [[ ! -d "${OPT_BACKUP_DIR}/${possible_tb_dir}" ]] && continue
-    found_tb_dir=1
-    rsync_push_module "${OPT_BACKUP_DIR}/${possible_tb_dir}/" "${remote_storage}/${TB_DIR}/"
-  done
-  if [ ${found_tb_dir} = 0 ]; then
-    echo_error "Can't find TitaniumBackup data directory"
-    exit 5
-  fi
-  echo_info "... Done!"
-
   # install TitaniumBackup so we can start restoring stuff on the device itself
   echo_info "Restoring TitaniumBackup apps ..."
   for apk in ${TB_APKS}; do
     if [[ -f "${OPT_BACKUP_DIR}/${apk}" ]]; then
       adb_install "${OPT_BACKUP_DIR}/${apk}"
     else
-      echo_error "Can't find TitaniumBackup app ${apk}."
-      exit 5
+      echo_warn "Can't find TitaniumBackup app ${apk}."
+      echo_info "... Skipped!"
     fi
   done
 
