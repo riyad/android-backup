@@ -33,8 +33,7 @@ readonly ANDROID_DEFAULT_STORAGE="/sdcard"
 # these are relative to OPT_BACKUP_DIR
 readonly TB_APKS="TitaniumBackup.apk TitaniumBackupPro.apk"
 # these are relative to OPT_BACKUP_DIR/STORAGE_NAME
-readonly SKIP_DIRS="${TB_DIR} ${TB_APKS} ${PRIO_DIRS}"
-readonly PRIO_DIRS="TitaniumBackup WhatsApp DCIM Pictures"
+readonly PRIO_DIRS=("TitaniumBackup" "Android/media/com.whatsapp/" "DCIM" "Pictures")
          DEVICE_SERIALNO="---NO-DEVICE---"
          ADB_RAW="adb"
          ADB="${ADB_RAW} -s ${DEVICE_SERIALNO}"
@@ -329,9 +328,11 @@ main() {
     local storage_name
     storage_name=$(basename "${remote_storage}")
     echo_info "... restoring ${storage_name} ..."
-    for dir in ${PRIO_DIRS}; do
-      [[ ! -d "${OPT_BACKUP_DIR}/${storage_name}/${dir}" ]] && continue
-      rsync_push_module "${OPT_BACKUP_DIR}/${storage_name}/${dir}/" "${remote_storage}/${dir}/"
+    for dir in "${PRIO_DIRS[@]}"; do
+      local prio_dir_candidate="${storage_name}/${dir}"
+      echo_debug "... restoring data to '${OPT_BACKUP_DIR}/${prio_dir_candidate}' ..."
+      [[ ! -d "${OPT_BACKUP_DIR}/${prio_dir_candidate}" ]] && continue
+      rsync_push_module "${OPT_BACKUP_DIR}/${prio_dir_candidate}/" "${remote_storage}/${dir}/"
     done
   done
   echo_info "... Done!"
