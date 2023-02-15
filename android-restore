@@ -39,6 +39,7 @@ readonly SKIP_DIRS="${TB_DIR} ${TB_APKS} ${PRIO_DIRS}"
          DEVICE_SERIALNO="---NO-DEVICE---"
          ADB_RAW="adb"
          ADB="${ADB_RAW} -s ${DEVICE_SERIALNO}"
+         ADB_SU_OPTIONS=""
 
 
 echo_debug() {
@@ -154,7 +155,7 @@ rsync_setup_remote() {
   fi
 
   echo_debug "Killing rsync daemon ..."
-  ${ADB} shell killall "${REMOTE_RSYNC_BIN}" 2>/dev/null
+  ${ADB} shell ${ADB_SU_OPTIONS} "killall \"${REMOTE_RSYNC_BIN}\" 2>/dev/null"
 
   # setup rsync daemon on the device
   # from http://blog.josefsson.org/2015/11/28/automatic-android-replicant-backup-over-usb-using-rsync/
@@ -177,7 +178,7 @@ rsync_setup_remote() {
   # if [[ ${OPT_DEBUG} ]]; then
   #   debug_options="--verbose"  # for debugging --no-detach --log-file=/proc/self/fd/2
   # fi
-  ${ADB} shell "${REMOTE_RSYNC_BIN} --daemon --config=\"${REMOTE_RSYNC_CONFIG}\" ${debug_options} &"
+  ${ADB} shell ${ADB_SU_OPTIONS} "${REMOTE_RSYNC_BIN} --daemon --config=\"${REMOTE_RSYNC_CONFIG}\" ${debug_options} &"
 }
 
 
@@ -300,7 +301,7 @@ main() {
   ADB="${ADB_RAW} -s ${DEVICE_SERIALNO}"
 
   if [[ ${OPT_ROOT} ]]; then
-    ${ADB} root
+    ADB_SU_OPTIONS="su -c"
   fi
   ${ADB} wait-for-device
 
@@ -367,10 +368,6 @@ main() {
 
   rsync_cleanup_remote
   rsync_cleanup_local
-
-  if [[ ${OPT_ROOT} ]]; then
-    ${ADB} unroot
-  fi
 }
 
 

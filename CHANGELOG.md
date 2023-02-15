@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.8.0
+
+* use `su` instead of `adb root` to prevent errors like "adbd cannot run as root in production builds"
+
 ## v0.7.1
 
 * Improve documentation
