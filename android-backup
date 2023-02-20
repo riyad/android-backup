@@ -129,7 +129,7 @@ rsync_setup_remote() {
     echo_info "Device doesn't have rsync."
     # try different locations for backup rsync
     local script_dir
-    script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+    script_dir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
     for rsync_src_dir in "${script_dir}" "/usr/local/lib/android-backup"; do
       local rsync_src="${rsync_src_dir}/rsync.bkp"
       [[ -e "${rsync_src}" ]] && break
