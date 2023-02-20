@@ -111,6 +111,7 @@ H /Android/data/com.android.providers.media/albumthumbs/
 H /Android/data/com.google.android.apps.maps/testdata/
 H /Android/data/org.videolan.vlc/files/thumbs/
 H /Android/data/*/cache
+H /Android/obb/
 H /Applidium Image Cache/
 EOT
 
@@ -168,7 +169,7 @@ rsync_setup_remote() {
   echo_debug "Starting remote rsync daemon ..."
   local debug_options=''
   # if [[ ${OPT_DEBUG} ]]; then
-  #   debug_options="--verbose"  # for debugging --no-detach --log-file=/proc/self/fd/2
+  #   debug_options="--verbose"  # for debugging --no-detach --log-file=/proc/self/fd/2  # or --log-file=/sdcard/android-backup_$(date -Iseconds).log
   # fi
   ${ADB} shell "\"${REMOTE_RSYNC_BIN}\" --daemon --config=\"${REMOTE_RSYNC_CONFIG}\" ${debug_options} &"
 }
