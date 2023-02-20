@@ -229,6 +229,7 @@ find_remote_storages() {
 
 
 parse_command_line_args() {
+  OPT_ASSUME_YES=''
   OPT_BACKUP_DIR=''
   OPT_DEBUG=''
   OPT_ROOT=''
@@ -249,6 +250,9 @@ parse_command_line_args() {
   while [[ $# -gt 1 ]]
   do
     case "$1" in
+      -y|--assume-yes)
+        readonly OPT_ASSUME_YES=1
+        ;;
       --debug)
         readonly OPT_DEBUG=1
         ;;
@@ -275,10 +279,11 @@ parse_command_line_args() {
 
 usage() {
   echo "Usage: $0 [OPTIONS] <BACKUP_DIR>"
-  echo "       Backup data from storages on the device to <BACKUP_DIR>."
+  echo "       Restore data from <BACKUP_DIR> to storages on the device."
   echo "       NOTE: this requires adb and rsync."
   echo ""
   echo "OPTIONS"
+  echo " -y,--assume-yes  Assume \"yes\" to all questions"
   echo "       --debug  Enable debug mode"
   echo " -r,--use-root  Use adb with root permissions"
 }
@@ -287,6 +292,7 @@ usage() {
 main() {
   parse_command_line_args "$@"
 
+  echo_debug "OPT_ASSUME_YES=${OPT_ASSUME_YES}"
   echo_debug "OPT_BACKUP_DIR=${OPT_BACKUP_DIR}"
   echo_debug "OPT_DEBUG=${OPT_DEBUG}"
   echo_debug "OPT_ROOT=${OPT_ROOT}"
@@ -294,6 +300,16 @@ main() {
   if [[ ! -d "${OPT_BACKUP_DIR}" ]]; then
     echo_error "'${OPT_BACKUP_DIR}' is not a directory."
     exit 2
+  fi
+
+  # make sure we don't overwrite anything by accident
+  if [[ -d "${OPT_BACKUP_DIR}" && ! ${OPT_ASSUME_YES} ]]; then
+    read -p "Are you sure you want to potentially overwrite files on your device? [Yes/No] " yn
+    case $yn in
+      'Yes'* ) ;;  # just get through
+      'No'* ) exit;;
+      * ) exit 3;;
+    esac
   fi
 
   compare_serialno
