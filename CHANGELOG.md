@@ -2,17 +2,20 @@
 
 ## v0.8.0
 
-* use `su` instead of `adb root` to prevent errors like "adbd cannot run as root in production builds"
-* recognize there're other (maintained) backup tools (now also for Seedvault and Neo Backup)
-  * install APKs if necessary
-  * restore their data directories with priority
-  * print instructions for starting the restoration process
+* Use `su` instead of `adb root` to prevent errors like "adbd cannot run as root in production builds"
+* Recognize there're other (maintained) backup tools (e.g. Seedvault and Neo Backup)
+  * Backup/restore their APKs if found
+  * Restore their data directories with priority
+  * Print instructions for starting the restoration process (for Seedvault)
+* Filter out /Android/obb
+* Ask for confirmation before actually restoring files
+  * Add `--assume-yes` option to android-restore
 
 ## v0.7.1
 
 * Improve documentation
 * Code quality improvements
-* Fix reading device serial number from pathes with spaces
+* Fix reading device serial number from paths with spaces
 
 ## v0.7
 
@@ -24,7 +27,7 @@
 
 ## v0.5.1
 
-* Add `--assume-yes` option
+* Add `--assume-yes` option to android-backup
 
 ## v0.5
 
