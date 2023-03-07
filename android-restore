@@ -366,8 +366,9 @@ main() {
 
   # TODO: determine we're actually using Seedvault
   echo_warn "If you're using Seedvault you might not be able to start restoring from the UI"
-  echo "    In that case you can start the Seedvault restoration process by running:"
-  echo "    ${ADB} shell ${ADB_SU_OPTIONS} \"am start-activity -a com.stevesoltys.seedvault.RESTORE_BACKUP\""
+  echo "    In that case you can start the Seedvault restoration process by typing"
+  echo "    *#*#7378673#*#*  into the dialer app."
+  echo "    see also https://github.com/seedvault-app/seedvault/wiki/FAQ#how-to-restore-after-passing-through-setup-wizard"
   # see https://github.com/seedvault-app/seedvault/wiki/FAQ#how-to-restore-after-passing-through-setup-wizard
 
   rsync_cleanup_remote
