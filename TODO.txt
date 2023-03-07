@@ -7,6 +7,4 @@
   * level 2 (echo_info): default?
   * level 3 (echo_debug): -v,--verbosity=3
   * --debug: really hardcore rsync debug output
-* Catch error when TitaniumBackup is installed aready
-  i.e. "Failed to install ./tmp/druk//TitaniumBackup.apk: Failure [INSTALL_FAILED_ALREADY_EXISTS: Attempt to re-install com.keramidas.TitaniumBackup without first uninstalling.]"
 * Save rsync daemon pid in file (and kill it using that)
