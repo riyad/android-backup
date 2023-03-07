@@ -122,6 +122,7 @@ Find your self-build rsync in `obj/local/*/rsync`.
 * Nexus 5, LineageOS 14.1 (Android 7.1.2)
 * OnePlus X, LineageOS 14.1 (Android 7.1.2)
 * Samsung Galaxy S9, LineageOS 17.1 (Android 10)
+* Google Pixel 6, Graphene OS (Android 13)
 
 ## Contact and Issues
 
