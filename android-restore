@@ -6,7 +6,7 @@
 #
 # Restores previously backed-up files to your Android phone.
 # You still need to restore your apps and config by running your backup app
-# (e.g. Neo Backup, TitaniumBackup).
+# (e.g. Neo Backup).
 
 
 set -o nounset  # complain when reading unset vars
@@ -32,9 +32,9 @@ readonly LOCAL_RSYNC_FILTER_FILE=`mktemp -t "$(basename $0).XXXXXXXXXX"`
 readonly ANDROID_DEFAULT_STORAGE="/sdcard"
          REMOTE_STORAGES=("${ANDROID_DEFAULT_STORAGE}")
 # these are relative to OPT_BACKUP_DIR
-readonly BKP_APKS="Neo-Backup.apk TitaniumBackup.apk TitaniumBackupPro.apk"
+readonly BKP_APKS="Neo-Backup.apk"
 # these are relative to OPT_BACKUP_DIR/STORAGE_NAME
-readonly PRIO_DIRS=(".SeedVaultAndroidBackup" "Neo Backup" "TitaniumBackup" "Android/media/com.whatsapp/" "DCIM" "Pictures")
+readonly PRIO_DIRS=(".SeedVaultAndroidBackup" "Neo Backup" "Android/media/com.whatsapp/" "DCIM" "Pictures")
          DEVICE_SERIALNO="---NO-DEVICE---"
          ADB_RAW="adb"
          ADB="${ADB_RAW} -s ${DEVICE_SERIALNO}"

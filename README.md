@@ -4,7 +4,7 @@ Android-Backup
 Backup and restore your Android phone with ADB (and rsync)
 
 It will backup and restore all of your `/sdcard` directory and any other storage (e.g. an external SD Card) mounted within `/storage` except for `emulated` and `self`).
-Assuming you're using also something like [Titanium Backup](https://play.google.com/store/apps/details?id=com.keramidas.TitaniumBackup) you'll be able to backup and restore all your apps, settings and data.
+Assuming you're using also something like [Neo Backup](https://github.com/NeoApplications/Neo-Backup) you'll be able to backup and restore all your apps, settings and data.
 
 It uses [ADB](https://developer.android.com/tools/help/adb.html) for setup and [rsync](https://en.wikipedia.org/wiki/Rsync) to do the copying since the [Android File Transfer Tool](https://www.android.com/filetransfer/) for Mac has a laughable quality for Google’s standards.
 

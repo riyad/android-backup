@@ -6,7 +6,7 @@
 #
 # Backs up your Android phone's storage(s).
 # It'll also back up your current backup apps for faster restoration
-# (e.g. Neo Backup, TitaniumBackup).
+# (e.g. Neo Backup).
 
 
 set -o nounset  # complain when reading unset vars
@@ -344,8 +344,6 @@ main() {
   # backup backup apps separately
   echo_info "Backing up backup apps ..."
   adb_pull_app com.machiav3lli.backup "${OPT_BACKUP_DIR}/Neo-Backup.apk"
-  adb_pull_app com.keramidas.TitaniumBackup "${OPT_BACKUP_DIR}/TitaniumBackup.apk"
-  adb_pull_app com.keramidas.TitaniumBackupPro "${OPT_BACKUP_DIR}/TitaniumBackupPro.apk"
   echo_info "... Done!"
 
   rsync_cleanup_remote
