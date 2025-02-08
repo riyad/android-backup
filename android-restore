@@ -308,7 +308,7 @@ main() {
     case $yn in
       'Yes'* ) ;;  # just get through
       'No'* ) exit;;
-      * ) exit 3;;
+      * ) echo_error "Unexpected answer: '$yn' Quitting..."; exit 3;;
     esac
   fi
 
