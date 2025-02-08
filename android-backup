@@ -64,9 +64,6 @@ adb_pull_app() {
 adb_push() {
   ${ADB} push -p "$1" "$2"
 }
-adb_rm_dir() {
-  ${ADB} shell "[[ -d \"$1\" ]] && rm -r \"$1\""
-}
 rsync_cleanup_local() {
   echo_debug "Removing local rsync filter file ..."
   [[ -e "${LOCAL_RSYNC_FILTER_FILE}" ]] && rm "${LOCAL_RSYNC_FILTER_FILE}"
